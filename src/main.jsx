@@ -23,6 +23,12 @@ const posts = [
     categoryPath: '/blog/voor-zorgverleners/',
     path: '/blog/blog-voor-zorgverleners',
     image: '/assets/blog-voor-zorgverleners.png',
+    foregroundImage: '/assets/zorgverleners.png',
+    foregroundClass: 'foreground-zorgverleners',
+    age: ['6-9 jaar', '9-12 jaar'],
+    theme: ['ernstig ziek', 'ongeneeslijk ziek'],
+    goal: ['samen begrijpen', 'samen voelen'],
+    intro: 'Een korte testblog voor zorgverleners over hoe je moeilijke informatie rustig en helder kunt aanbieden aan kinderen en hun omgeving.',
   },
   {
     title: 'Blog voor leerkrachten',
@@ -30,6 +36,12 @@ const posts = [
     categoryPath: '/blog/voor-leerkrachten/',
     path: '/blog/blog-voor-leerkrachten',
     image: '/assets/blog-voor-leerkrachten.png',
+    foregroundImage: '/assets/leerkrachten.png',
+    foregroundClass: 'foreground-leerkrachten',
+    age: ['3-5 jaar', '6-9 jaar', '9-12 jaar'],
+    theme: ['afscheid en rouw'],
+    goal: ['samen begrijpen', 'samen doen'],
+    intro: 'Een testblog voor leerkrachten met handvatten om ruimte te maken voor vragen, stilte en gesprek in de klas.',
   },
   {
     title: 'Blog voor zorgfiguren',
@@ -37,6 +49,108 @@ const posts = [
     categoryPath: '/blog/voor-zorgfiguren/',
     path: '/blog/blog-voor-zorgfiguren',
     image: '/assets/blog-voor-zorgfiguren.png',
+    foregroundImage: '/assets/zorgfiguren.png',
+    foregroundClass: 'foreground-zorgfiguren',
+    age: ['0-2 jaar', '3-5 jaar', '6-9 jaar'],
+    theme: ['ernstig ziek', 'ongeneeslijk ziek', 'afscheid en rouw'],
+    goal: ['samen begrijpen', 'samen voelen', 'samen doen'],
+    intro: 'Een testblog voor zorgfiguren over nabij blijven, woorden zoeken en samen kleine momenten van betekenis maken.',
+  },
+  {
+    title: 'Wanneer woorden moeilijk zijn',
+    category: 'Voor zorgfiguren',
+    categoryPath: '/blog/voor-zorgfiguren/',
+    path: '/blog/wanneer-woorden-moeilijk-zijn',
+    image: '/assets/blog-voor-zorgfiguren.png',
+    foregroundImage: '/assets/zorgfiguren.png',
+    foregroundClass: 'foreground-zorgfiguren',
+    age: ['3-5 jaar', '6-9 jaar'],
+    theme: ['ernstig ziek'],
+    goal: ['samen voelen', 'samen begrijpen'],
+    intro: 'Soms zijn er geen perfecte woorden. Deze testblog verkent hoe nabijheid, eenvoud en herhaling toch veiligheid kunnen geven.',
+  },
+  {
+    title: 'Een rustig afscheidsmoment maken',
+    category: 'Voor zorgfiguren',
+    categoryPath: '/blog/voor-zorgfiguren/',
+    path: '/blog/een-rustig-afscheidsmoment-maken',
+    image: '/assets/blog-voor-zorgfiguren.png',
+    foregroundImage: '/assets/zorgfiguren.png',
+    foregroundClass: 'foreground-zorgfiguren',
+    age: ['0-2 jaar', '3-5 jaar'],
+    theme: ['afscheid en rouw'],
+    goal: ['samen voelen', 'samen doen'],
+    intro: 'Een testblog over zachte rituelen, voorspelbaarheid en kleine handelingen die een afscheid tastbaar kunnen maken.',
+  },
+  {
+    title: 'Praten in de klas over ziekte',
+    category: 'Voor leerkrachten',
+    categoryPath: '/blog/voor-leerkrachten/',
+    path: '/blog/praten-in-de-klas-over-ziekte',
+    image: '/assets/blog-voor-leerkrachten.png',
+    foregroundImage: '/assets/leerkrachten.png',
+    foregroundClass: 'foreground-leerkrachten',
+    age: ['6-9 jaar', '9-12 jaar'],
+    theme: ['ernstig ziek'],
+    goal: ['samen begrijpen'],
+    intro: 'Deze testblog laat zien hoe je als leerkracht ziekte bespreekbaar kunt maken zonder de klas te overspoelen.',
+  },
+  {
+    title: 'Rituelen die kinderen houvast geven',
+    category: 'Voor leerkrachten',
+    categoryPath: '/blog/voor-leerkrachten/',
+    path: '/blog/rituelen-die-kinderen-houvast-geven',
+    image: '/assets/blog-voor-leerkrachten.png',
+    foregroundImage: '/assets/leerkrachten.png',
+    foregroundClass: 'foreground-leerkrachten',
+    age: ['3-5 jaar', '6-9 jaar'],
+    theme: ['afscheid en rouw'],
+    goal: ['samen doen', 'samen voelen'],
+    intro: 'Een testblog over klasrituelen die kinderen helpen om gevoelens te delen en samen houvast te vinden.',
+  },
+  {
+    title: 'Uitleg geven zonder te overspoelen',
+    category: 'Voor zorgverleners',
+    categoryPath: '/blog/voor-zorgverleners/',
+    path: '/blog/uitleg-geven-zonder-te-overspoelen',
+    image: '/assets/blog-voor-zorgverleners.png',
+    foregroundImage: '/assets/zorgverleners.png',
+    foregroundClass: 'foreground-zorgverleners',
+    age: ['6-9 jaar', '9-12 jaar'],
+    theme: ['ongeneeslijk ziek'],
+    goal: ['samen begrijpen'],
+    intro: 'Een testblog met aandacht voor doseren, checken wat een kind al weet en aansluiten bij de taal van het gezin.',
+  },
+  {
+    title: 'Samen iets doen na slecht nieuws',
+    category: 'Voor zorgverleners',
+    categoryPath: '/blog/voor-zorgverleners/',
+    path: '/blog/samen-iets-doen-na-slecht-nieuws',
+    image: '/assets/blog-voor-zorgverleners.png',
+    foregroundImage: '/assets/zorgverleners.png',
+    foregroundClass: 'foreground-zorgverleners',
+    age: ['0-2 jaar', '3-5 jaar', '6-9 jaar'],
+    theme: ['ernstig ziek', 'ongeneeslijk ziek'],
+    goal: ['samen doen', 'samen voelen'],
+    intro: 'Een testblog over eenvoudige activiteiten na slecht nieuws: tekenen, verzamelen, vertellen of gewoon samen zijn.',
+  },
+]
+
+const filterGroups = [
+  {
+    key: 'age',
+    label: 'Leeftijd',
+    options: ['0-2 jaar', '3-5 jaar', '6-9 jaar', '9-12 jaar'],
+  },
+  {
+    key: 'theme',
+    label: 'Thema',
+    options: ['ernstig ziek', 'ongeneeslijk ziek', 'afscheid en rouw'],
+  },
+  {
+    key: 'goal',
+    label: 'Doel',
+    options: ['samen begrijpen', 'samen voelen', 'samen doen'],
   },
 ]
 
@@ -152,49 +266,148 @@ function Home() {
 }
 
 function BlogList({ path }) {
+  const [filters, setFilters] = useState({ age: [], theme: [], goal: [] })
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
-  const visiblePosts = activeCategory === 'Alle berichten' ? posts : posts.filter((post) => post.category === activeCategory)
+  const categoryPosts = activeCategory === 'Alle berichten' ? posts : posts.filter((post) => post.category === activeCategory)
+  const visiblePosts = categoryPosts.filter((post) =>
+    filterGroups.every((group) => filters[group.key].length === 0 || filters[group.key].some((value) => post[group.key].includes(value))),
+  )
+  const hasActiveFilters = filterGroups.some((group) => filters[group.key].length > 0)
+  const activeFilterCount = filterGroups.reduce((count, group) => count + filters[group.key].length, 0)
+
+  function toggleFilter(groupKey, value) {
+    setFilters((current) => {
+      const isActive = current[groupKey].includes(value)
+      return {
+        ...current,
+        [groupKey]: isActive ? current[groupKey].filter((item) => item !== value) : [...current[groupKey], value],
+      }
+    })
+  }
+
+  function clearFilters() {
+    setFilters({ age: [], theme: [], goal: [] })
+  }
 
   return (
     <section className="blog-section section-bg">
-      <div className="page-width blog-layout">
-        <aside className="category-list">
-          {categories.map((category) => (
-            <a className={category.label === activeCategory ? 'selected' : ''} href={category.path} key={category.path}>
-              {category.label}
-            </a>
-          ))}
-        </aside>
-        <div className="category-dropdown">
-          <button type="button">Categorieën <span>⌄</span></button>
+      <div className="page-width blog-layout blog-layout-cards">
+        <div className="blog-toolbar">
+          <nav className="category-pills" aria-label="Blogcategorieën">
+            {categories.map((category) => (
+              <a className={category.label === activeCategory ? 'selected' : ''} href={category.path} key={category.path}>
+                {category.label}
+              </a>
+            ))}
+          </nav>
+          <div className="filter-popover-wrap">
+            <button
+              className={`filter-toggle ${filtersOpen ? 'is-open' : ''}`}
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+            >
+              Filters
+              {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+              <i className="filter-chevron" aria-hidden="true" />
+            </button>
+            {filtersOpen && (
+              <FilterControls filters={filters} toggleFilter={toggleFilter} clearFilters={clearFilters} hasActiveFilters={hasActiveFilters} />
+            )}
+          </div>
         </div>
-        <div className="posts-list">
+        <div className="posts-grid">
           {visiblePosts.map((post) => (
             <a className="post-card" href={post.path} key={post.path}>
               <span className="post-thumb">
-                <img src={post.image} alt="" />
+                <img className="post-thumb-bg" src={post.image} alt="" />
+                {post.foregroundImage && <img className={`post-thumb-foreground ${post.foregroundClass || ''}`} src={post.foregroundImage} alt="" />}
               </span>
               <span className="post-summary">
+                <span className="post-category-label">{post.category}</span>
                 <span className="post-title">{post.title}</span>
+                <span className="post-description">{post.intro}</span>
               </span>
             </a>
           ))}
+          {visiblePosts.length === 0 && (
+            <p className="empty-results">Geen berichten gevonden voor deze filters.</p>
+          )}
         </div>
       </div>
     </section>
   )
 }
 
+function FilterControls({ filters, toggleFilter, clearFilters, hasActiveFilters }) {
+  return (
+    <div className="filter-panel" aria-label="Filter blogartikels">
+      {filterGroups.map((group) => (
+        <fieldset className="filter-group" key={group.key}>
+          <legend>{group.label}</legend>
+          <div className="filter-options">
+            {group.options.map((option) => (
+              <button
+                className={filters[group.key].includes(option) ? 'active' : ''}
+                key={option}
+                type="button"
+                onClick={() => toggleFilter(group.key, option)}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      {hasActiveFilters && (
+        <button className="clear-filters" type="button" onClick={clearFilters}>
+          Wis filters
+        </button>
+      )}
+    </div>
+  )
+}
+
 function BlogPost({ post }) {
+  const tags = [
+    ...post.age,
+    ...post.theme,
+    ...post.goal,
+  ]
+
   return (
     <section className="post-page">
       <article className="page-width post-article">
         <a className="back-link" href="/blog/">
           <span aria-hidden="true">‹</span> Alle berichten
         </a>
-        <h1>{post.title}</h1>
-        <a className="post-category" href={post.categoryPath}>{post.category}</a>
-        <div className="empty-post" aria-hidden="true">&nbsp;</div>
+        <div className="detail-hero">
+          <div className="detail-image">
+            <img className="post-thumb-bg" src={post.image} alt="" />
+            {post.foregroundImage && <img className={`post-thumb-foreground ${post.foregroundClass || ''}`} src={post.foregroundImage} alt="" />}
+          </div>
+          <div className="detail-heading">
+            <a className="post-category" href={post.categoryPath}>{post.category}</a>
+            <h1>{post.title}</h1>
+            <p>{post.intro}</p>
+          </div>
+        </div>
+        <div className="detail-tags" aria-label="Labels">
+          {tags.map((tag) => (
+            <span key={tag}>{tag}</span>
+          ))}
+        </div>
+        <div className="post-content">
+          <p>
+            Dit is voorbeeldinhoud voor het detail scherm. Hier kan later de volledige blogtekst komen, met concrete tips,
+            reflectievragen of kleine oefeningen die passen bij de gekozen leeftijd, het thema en het doel.
+          </p>
+          <p>
+            De pagina is nu gekoppeld aan de blogkaarten en werkt voor alle testblogs. Daardoor kun je de navigatie,
+            filters en detailweergave al goed testen terwijl de definitieve inhoud nog wordt geschreven.
+          </p>
+        </div>
         <ShareBlock url={`https://meeinhetverhaal.be${post.path}`} />
       </article>
     </section>
