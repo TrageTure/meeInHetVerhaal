@@ -136,7 +136,7 @@ const posts = [
   },
 ]
 
-const filterGroups = [
+const defaultFilterGroups = [
   {
     key: 'age',
     label: 'Leeftijd',
@@ -161,6 +161,87 @@ const homeTiles = [
   { path: '/contact', image: '/assets/contact-card.png', alt: 'Contact' },
 ]
 
+const defaultArticle = {
+  title: '',
+  category: 'Voor zorgfiguren',
+  intro: '',
+  content: '',
+  age: [],
+  theme: [],
+  goal: [],
+}
+
+function getStoredPosts() {
+  try {
+    return JSON.parse(window.localStorage.getItem('meeinhetverhaal.posts') || '[]')
+  } catch {
+    return []
+  }
+}
+
+function getStoredFilterGroups() {
+  try {
+    return JSON.parse(window.localStorage.getItem('meeinhetverhaal.filters') || JSON.stringify(defaultFilterGroups))
+  } catch {
+    return defaultFilterGroups
+  }
+}
+
+function getEmptyFilterState(groups) {
+  return groups.reduce((state, group) => ({ ...state, [group.key]: [] }), {})
+}
+
+function createFilterKey(label, existingGroups) {
+  const baseKey = slugify(label) || `filter-${Date.now()}`
+  const usedKeys = new Set(existingGroups.map((group) => group.key))
+  let key = baseKey
+  let counter = 2
+  while (usedKeys.has(key)) {
+    key = `${baseKey}-${counter}`
+    counter += 1
+  }
+  return key
+}
+
+function mergeManagedPosts(managedPosts, basePosts) {
+  const replacedPaths = new Set(managedPosts.map((post) => post.originalPath || post.path))
+  return [...managedPosts, ...basePosts.filter((post) => !replacedPaths.has(post.path))]
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function getCategoryConfig(category) {
+  if (category === 'Voor leerkrachten') {
+    return {
+      categoryPath: '/blog/voor-leerkrachten/',
+      image: '/assets/blog-voor-leerkrachten.png',
+      foregroundImage: '/assets/leerkrachten.png',
+      foregroundClass: 'foreground-leerkrachten',
+    }
+  }
+  if (category === 'Voor zorgverleners') {
+    return {
+      categoryPath: '/blog/voor-zorgverleners/',
+      image: '/assets/blog-voor-zorgverleners.png',
+      foregroundImage: '/assets/zorgverleners.png',
+      foregroundClass: 'foreground-zorgverleners',
+    }
+  }
+  return {
+    categoryPath: '/blog/voor-zorgfiguren/',
+    image: '/assets/blog-voor-zorgfiguren.png',
+    foregroundImage: '/assets/zorgfiguren.png',
+    foregroundClass: 'foreground-zorgfiguren',
+  }
+}
+
 function normalizePath(path) {
   if (!path || path === '') return '/'
   if (path !== '/' && path.endsWith('/') && !path.startsWith('/blog/voor-')) {
@@ -171,38 +252,107 @@ function normalizePath(path) {
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const path = normalizePath(window.location.pathname)
+  const [managedPosts, setManagedPosts] = useState(getStoredPosts)
+  const [siteFilterGroups, setSiteFilterGroups] = useState(getStoredFilterGroups)
+  const [currentPath, setCurrentPath] = useState(window.location.pathname)
+  const path = normalizePath(currentPath)
+  const allPosts = useMemo(() => mergeManagedPosts(managedPosts, posts), [managedPosts])
   const pageTitle = useMemo(() => {
     if (path === '/') return 'Mee in het verhaal'
     if (path === '/blog' || path.startsWith('/blog/voor-')) return 'Blog | Mee in het verhaal'
+    if (path === '/beheer') return 'Beheer | Mee in het verhaal'
     if (path === '/over-jorane') return 'Over Jorane | Mee in het verhaal'
     if (path === '/contact') return 'Contact | Mee in het verhaal'
-    const post = posts.find((item) => item.path === path)
+    const post = allPosts.find((item) => item.path === path)
     return post ? post.title : 'Mee in het verhaal'
-  }, [path])
+  }, [path, allPosts])
+
+  function savePost(article, originalPath) {
+    const config = getCategoryConfig(article.category)
+    let pathForPost = article.path
+    if (!pathForPost) {
+      const baseSlug = slugify(article.title) || `artikel-${Date.now()}`
+      const usedPaths = new Set(allPosts.map((post) => post.path))
+      let slug = baseSlug
+      let counter = 2
+      while (usedPaths.has(`/blog/${slug}`)) {
+        slug = `${baseSlug}-${counter}`
+        counter += 1
+      }
+      pathForPost = `/blog/${slug}`
+    }
+    const savedPost = {
+      ...article,
+      ...config,
+      path: pathForPost,
+      originalPath: originalPath || article.originalPath || pathForPost,
+      intro: article.intro.trim(),
+      content: article.content.trim(),
+      updatedAt: new Date().toISOString(),
+    }
+    setManagedPosts((current) => {
+      const matchPath = originalPath || savedPost.originalPath || savedPost.path
+      const exists = current.some((post) => (post.originalPath || post.path) === matchPath)
+      const next = exists
+        ? current.map((post) => ((post.originalPath || post.path) === matchPath ? savedPost : post))
+        : [savedPost, ...current]
+      window.localStorage.setItem('meeinhetverhaal.posts', JSON.stringify(next))
+      return next
+    })
+    window.history.pushState({}, '', savedPost.path)
+    window.dispatchEvent(new Event('popstate'))
+  }
+
+  function saveFilterGroups(groups, filterChanges = []) {
+    setSiteFilterGroups(groups)
+    window.localStorage.setItem('meeinhetverhaal.filters', JSON.stringify(groups))
+    if (filterChanges.length > 0) {
+      const migratedPosts = allPosts.map((post) => {
+        const migratedPost = { ...post, originalPath: post.originalPath || post.path }
+        filterChanges.forEach(({ groupKey, from, to }) => {
+          if (from && to && from !== to && migratedPost[groupKey]?.includes(from)) {
+            migratedPost[groupKey] = migratedPost[groupKey].map((value) => (value === from ? to : value))
+          }
+        })
+        return migratedPost
+      })
+      setManagedPosts(migratedPosts)
+      window.localStorage.setItem('meeinhetverhaal.posts', JSON.stringify(migratedPosts))
+    }
+  }
 
   React.useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
+
+  React.useEffect(() => {
+    function handleRouteChange() {
+      setCurrentPath(window.location.pathname)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+    window.addEventListener('popstate', handleRouteChange)
+    return () => window.removeEventListener('popstate', handleRouteChange)
+  }, [])
 
   return (
     <>
       <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       <main>
         {path === '/' && <Home />}
-        {(path === '/blog' || path === '/blog/' || path.startsWith('/blog/voor-')) && <BlogList path={window.location.pathname} />}
+        {(path === '/blog' || path === '/blog/' || path.startsWith('/blog/voor-')) && <BlogList path={window.location.pathname} posts={allPosts} filterGroups={siteFilterGroups} />}
+        {path === '/beheer' && <AdminCMS posts={allPosts} filterGroups={siteFilterGroups} onSavePost={savePost} onSaveFilterGroups={saveFilterGroups} />}
         {path === '/over-jorane' && <About />}
         {path === '/contact' && <Contact />}
-        {posts.some((post) => post.path === path) && <BlogPost post={posts.find((post) => post.path === path)} />}
-        {!isKnownPath(path) && <Home />}
+        {allPosts.some((post) => post.path === path) && <BlogPost post={allPosts.find((post) => post.path === path)} filterGroups={siteFilterGroups} />}
+        {!isKnownPath(path, allPosts) && <Home />}
       </main>
       <Footer />
     </>
   )
 }
 
-function isKnownPath(path) {
-  return path === '/' || path === '/blog' || path.startsWith('/blog/voor-') || path === '/over-jorane' || path === '/contact' || posts.some((post) => post.path === path)
+function isKnownPath(path, allPosts) {
+  return path === '/' || path === '/blog' || path.startsWith('/blog/voor-') || path === '/beheer' || path === '/over-jorane' || path === '/contact' || allPosts.some((post) => post.path === path)
 }
 
 function Header({ path, menuOpen, setMenuOpen }) {
@@ -265,29 +415,40 @@ function Home() {
   )
 }
 
-function BlogList({ path }) {
-  const [filters, setFilters] = useState({ age: [], theme: [], goal: [] })
+function BlogList({ path, posts: blogPosts, filterGroups }) {
+  const [filters, setFilters] = useState(() => getEmptyFilterState(filterGroups))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
-  const categoryPosts = activeCategory === 'Alle berichten' ? posts : posts.filter((post) => post.category === activeCategory)
+  const categoryPosts = activeCategory === 'Alle berichten' ? blogPosts : blogPosts.filter((post) => post.category === activeCategory)
   const visiblePosts = categoryPosts.filter((post) =>
-    filterGroups.every((group) => filters[group.key].length === 0 || filters[group.key].some((value) => post[group.key].includes(value))),
+    filterGroups.every((group) => (filters[group.key] || []).length === 0 || (filters[group.key] || []).some((value) => (post[group.key] || []).includes(value))),
   )
-  const hasActiveFilters = filterGroups.some((group) => filters[group.key].length > 0)
-  const activeFilterCount = filterGroups.reduce((count, group) => count + filters[group.key].length, 0)
+  const hasActiveFilters = filterGroups.some((group) => (filters[group.key] || []).length > 0)
+  const activeFilterCount = filterGroups.reduce((count, group) => count + (filters[group.key] || []).length, 0)
+
+  React.useEffect(() => {
+    setFilters((current) => {
+      const next = getEmptyFilterState(filterGroups)
+      filterGroups.forEach((group) => {
+        next[group.key] = (current[group.key] || []).filter((value) => group.options.includes(value))
+      })
+      return next
+    })
+  }, [filterGroups])
 
   function toggleFilter(groupKey, value) {
     setFilters((current) => {
-      const isActive = current[groupKey].includes(value)
+      const currentValues = current[groupKey] || []
+      const isActive = currentValues.includes(value)
       return {
         ...current,
-        [groupKey]: isActive ? current[groupKey].filter((item) => item !== value) : [...current[groupKey], value],
+        [groupKey]: isActive ? currentValues.filter((item) => item !== value) : [...currentValues, value],
       }
     })
   }
 
   function clearFilters() {
-    setFilters({ age: [], theme: [], goal: [] })
+    setFilters(getEmptyFilterState(filterGroups))
   }
 
   return (
@@ -313,7 +474,7 @@ function BlogList({ path }) {
               <i className="filter-chevron" aria-hidden="true" />
             </button>
             {filtersOpen && (
-              <FilterControls filters={filters} toggleFilter={toggleFilter} clearFilters={clearFilters} hasActiveFilters={hasActiveFilters} />
+              <FilterControls filterGroups={filterGroups} filters={filters} toggleFilter={toggleFilter} clearFilters={clearFilters} hasActiveFilters={hasActiveFilters} />
             )}
           </div>
         </div>
@@ -340,7 +501,7 @@ function BlogList({ path }) {
   )
 }
 
-function FilterControls({ filters, toggleFilter, clearFilters, hasActiveFilters }) {
+function FilterControls({ filterGroups, filters, toggleFilter, clearFilters, hasActiveFilters }) {
   return (
     <div className="filter-panel" aria-label="Filter blogartikels">
       {filterGroups.map((group) => (
@@ -349,7 +510,7 @@ function FilterControls({ filters, toggleFilter, clearFilters, hasActiveFilters 
           <div className="filter-options">
             {group.options.map((option) => (
               <button
-                className={filters[group.key].includes(option) ? 'active' : ''}
+                className={(filters[group.key] || []).includes(option) ? 'active' : ''}
                 key={option}
                 type="button"
                 onClick={() => toggleFilter(group.key, option)}
@@ -369,12 +530,415 @@ function FilterControls({ filters, toggleFilter, clearFilters, hasActiveFilters 
   )
 }
 
-function BlogPost({ post }) {
-  const tags = [
-    ...post.age,
-    ...post.theme,
-    ...post.goal,
-  ]
+function articleFromPost(post, filterGroups) {
+  const article = {
+    ...defaultArticle,
+    ...post,
+    content: post.content || '',
+    path: post.path,
+    originalPath: post.originalPath || post.path,
+  }
+  filterGroups.forEach((group) => {
+    article[group.key] = post[group.key] || []
+  })
+  return article
+}
+
+function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilterGroups }) {
+  const [article, setArticle] = useState(defaultArticle)
+  const [selectedPath, setSelectedPath] = useState('')
+  const [draftFilterGroups, setDraftFilterGroups] = useState(filterGroups)
+  const [newFilterValues, setNewFilterValues] = useState(getEmptyFilterState(filterGroups))
+  const [activeAdminView, setActiveAdminView] = useState('new')
+  const [newFilterGroup, setNewFilterGroup] = useState({ label: '', option: '' })
+  const isEditing = Boolean(selectedPath)
+  const categoryConfig = getCategoryConfig(article.category)
+  const previewPost = {
+    ...article,
+    ...categoryConfig,
+    title: article.title || 'Titel van je blogartikel',
+    intro: article.intro || 'Schrijf hier een korte beschrijving die gezinnen, leerkrachten of zorgverleners meteen helpt begrijpen waar dit artikel over gaat.',
+  }
+  const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
+  const canSave = article.title.trim() && article.intro.trim() && (isEditing || article.content.trim()) && hasEveryFilterGroup
+
+  React.useEffect(() => {
+    setDraftFilterGroups(filterGroups)
+    setNewFilterValues(getEmptyFilterState(filterGroups))
+    setArticle((current) => {
+      const next = { ...current }
+      filterGroups.forEach((group) => {
+        next[group.key] = (current[group.key] || []).filter((value) => group.options.includes(value))
+      })
+      return next
+    })
+  }, [filterGroups])
+
+  function startNewArticle() {
+    setSelectedPath('')
+    setArticle(defaultArticle)
+  }
+
+  function openNewArticle() {
+    setActiveAdminView('new')
+    startNewArticle()
+  }
+
+  function openManageArticles() {
+    setActiveAdminView('manage')
+    if (!selectedPath && editablePosts[0]) {
+      selectArticle(editablePosts[0].path)
+    }
+  }
+
+  function selectArticle(path) {
+    const post = editablePosts.find((item) => item.path === path)
+    if (!post) return
+    setSelectedPath(post.originalPath || post.path)
+    setArticle(articleFromPost(post, filterGroups))
+  }
+
+  function updateField(field, value) {
+    setArticle((current) => ({ ...current, [field]: value }))
+  }
+
+  function toggleCmsChip(groupKey, value) {
+    setArticle((current) => {
+      const currentValues = current[groupKey] || []
+      const isActive = currentValues.includes(value)
+      return {
+        ...current,
+        [groupKey]: isActive ? currentValues.filter((item) => item !== value) : [...currentValues, value],
+      }
+    })
+  }
+
+  function submitArticle(event) {
+    event.preventDefault()
+    if (!canSave) return
+    onSavePost(article, selectedPath || article.originalPath)
+  }
+
+  function updateFilterOption(groupKey, optionIndex, value) {
+    setDraftFilterGroups((current) =>
+      current.map((group) =>
+        group.key === groupKey
+          ? { ...group, options: group.options.map((option, index) => (index === optionIndex ? value : option)) }
+          : group,
+      ),
+    )
+  }
+
+  function updateFilterGroupLabel(groupKey, value) {
+    setDraftFilterGroups((current) =>
+      current.map((group) => (group.key === groupKey ? { ...group, label: value } : group)),
+    )
+  }
+
+  function updateNewFilterValue(groupKey, value) {
+    setNewFilterValues((current) => ({ ...current, [groupKey]: value }))
+  }
+
+  function addFilterOption(groupKey) {
+    const value = (newFilterValues[groupKey] || '').trim()
+    if (!value) return
+    setDraftFilterGroups((current) =>
+      current.map((group) =>
+        group.key === groupKey && !group.options.includes(value)
+          ? { ...group, options: [...group.options, value] }
+          : group,
+      ),
+    )
+    setNewFilterValues((current) => ({ ...current, [groupKey]: '' }))
+  }
+
+  function addFilterGroup() {
+    const label = newFilterGroup.label.trim()
+    const option = newFilterGroup.option.trim()
+    if (!label) return
+    const key = createFilterKey(label, draftFilterGroups)
+    setDraftFilterGroups((current) => [
+        ...current,
+        {
+          key,
+          label,
+          options: option ? [option] : [],
+        },
+      ])
+    setNewFilterValues((current) => ({ ...current, [key]: '' }))
+    setNewFilterGroup({ label: '', option: '' })
+  }
+
+  function saveFilters() {
+    const cleanedGroups = draftFilterGroups.map((group) => {
+      const uniqueOptions = []
+      group.options.forEach((option) => {
+        const trimmed = option.trim()
+        if (trimmed && !uniqueOptions.includes(trimmed)) uniqueOptions.push(trimmed)
+      })
+      return { ...group, label: group.label.trim() || 'Nieuwe filter', options: uniqueOptions }
+    })
+    const filterChanges = []
+    cleanedGroups.forEach((group) => {
+      const originalGroup = filterGroups.find((item) => item.key === group.key)
+      group.options.forEach((option, index) => {
+        const originalOption = originalGroup?.options[index]
+        if (originalOption && originalOption !== option) {
+          filterChanges.push({ groupKey: group.key, from: originalOption, to: option })
+        }
+      })
+    })
+    onSaveFilterGroups(cleanedGroups, filterChanges)
+  }
+
+  return (
+    <section className="admin-section section-bg">
+      <div className="page-width">
+        <div className="admin-heading">
+          <span>Beheer</span>
+          <h1>{activeAdminView === 'new' ? 'Nieuwe blog aanmaken' : activeAdminView === 'manage' ? 'Bestaande blogs beheren' : 'Filters beheren'}</h1>
+          <p>{activeAdminView === 'new' ? 'Schrijf een nieuw artikel in een rustige editor met live preview.' : activeAdminView === 'manage' ? 'Kies een bestaande blog, pas hem aan en bekijk meteen hoe de kaart eruitziet.' : 'Voeg filteropties toe of hernoem bestaande filters zonder de artikel-editor te openen.'}</p>
+        </div>
+
+        <div className="admin-view-switch" aria-label="Beheer wisselen">
+          <button className={activeAdminView === 'new' ? 'active' : ''} type="button" onClick={openNewArticle}>
+            Nieuwe blog
+          </button>
+          <button className={activeAdminView === 'manage' ? 'active' : ''} type="button" onClick={openManageArticles}>
+            Bestaande blogs
+          </button>
+          <button className={activeAdminView === 'filters' ? 'active' : ''} type="button" onClick={() => setActiveAdminView('filters')}>
+            Filters
+          </button>
+        </div>
+
+        {(activeAdminView === 'new' || activeAdminView === 'manage') && (
+          <div className="admin-layout admin-overlay">
+            <form className="admin-form" onSubmit={submitArticle}>
+              {activeAdminView === 'manage' && (
+                <section className="admin-panel">
+                  <div className="panel-title">
+                    <span>1</span>
+                    <div>
+                      <h2>Artikels</h2>
+                      <p>Kies welke blog je wil bewerken.</p>
+                    </div>
+                  </div>
+                  <div className="article-picker" aria-label="Bestaande blogartikels">
+                    {editablePosts.map((post) => (
+                      <button
+                        className={(post.originalPath || post.path) === selectedPath ? 'active' : ''}
+                        key={post.path}
+                        type="button"
+                        onClick={() => selectArticle(post.path)}
+                      >
+                        <span>{post.category}</span>
+                        {post.title}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              <section className="admin-panel">
+                <div className="panel-title">
+                  <span>{activeAdminView === 'manage' ? '2' : '1'}</span>
+                  <div>
+                    <h2>Basis</h2>
+                    <p>Titel, doelgroep en korte omschrijving.</p>
+                  </div>
+                </div>
+                <label className="admin-field">
+                  Titel
+                  <input value={article.title} onChange={(event) => updateField('title', event.target.value)} placeholder="Bijvoorbeeld: Praten over verdriet" />
+                </label>
+                <label className="admin-field">
+                  Doelgroep
+                  <select value={article.category} onChange={(event) => updateField('category', event.target.value)}>
+                    {categories.slice(1).map((category) => (
+                      <option key={category.label} value={category.label}>{category.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-field">
+                  Korte beschrijving
+                  <textarea value={article.intro} onChange={(event) => updateField('intro', event.target.value)} rows="3" placeholder="Een warme intro van maximaal enkele zinnen." />
+                </label>
+              </section>
+
+              <section className="admin-panel">
+                <div className="panel-title">
+                  <span>{activeAdminView === 'manage' ? '3' : '2'}</span>
+                  <div>
+                    <h2>Filters</h2>
+                    <p>Kies wat straks vindbaar moet zijn.</p>
+                  </div>
+                </div>
+                {filterGroups.map((group) => (
+                  <fieldset className="cms-filter-group" key={group.key}>
+                    <legend>{group.label}</legend>
+                    <div className="cms-chip-row">
+                      {group.options.map((option) => (
+                        <button className={(article[group.key] || []).includes(option) ? 'active' : ''} key={option} type="button" onClick={() => toggleCmsChip(group.key, option)}>
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                ))}
+              </section>
+
+              <section className="admin-panel">
+                <div className="panel-title">
+                  <span>{activeAdminView === 'manage' ? '4' : '3'}</span>
+                  <div>
+                    <h2>Inhoud</h2>
+                    <p>Deze tekst komt op het detail scherm.</p>
+                  </div>
+                </div>
+                <label className="admin-field">
+                  Artikeltekst
+                  <textarea className="article-body-input" value={article.content} onChange={(event) => updateField('content', event.target.value)} rows="8" placeholder="Schrijf je artikeltekst hier..." />
+                </label>
+              </section>
+
+              <div className="admin-actions">
+                <button type="button" onClick={activeAdminView === 'manage' ? openManageArticles : startNewArticle}>{activeAdminView === 'manage' ? 'Herlaad selectie' : 'Leegmaken'}</button>
+                <button className="publish-button" type="submit" disabled={!canSave}>{activeAdminView === 'manage' ? 'Wijzigingen opslaan' : 'Publiceren'}</button>
+              </div>
+            </form>
+
+            <aside className="admin-preview" aria-label="Live preview">
+              <div className="preview-sticky">
+                <div className="preview-label">Live preview</div>
+                <a className="post-card preview-card" href="/beheer" onClick={(event) => event.preventDefault()}>
+                  <span className="post-thumb">
+                    <img className="post-thumb-bg" src={previewPost.image} alt="" />
+                    <img className={`post-thumb-foreground ${previewPost.foregroundClass}`} src={previewPost.foregroundImage} alt="" />
+                  </span>
+                  <span className="post-summary">
+                    <span className="post-category-label">{previewPost.category}</span>
+                    <span className="post-title">{previewPost.title}</span>
+                    <span className="post-description">{previewPost.intro}</span>
+                  </span>
+                </a>
+                <div className="preview-checklist">
+                  <span className={article.title.trim() ? 'done' : ''}>Titel</span>
+                  <span className={article.intro.trim() ? 'done' : ''}>Beschrijving</span>
+                  <span className={isEditing || article.content.trim() ? 'done' : ''}>Tekst</span>
+                  <span className={hasEveryFilterGroup ? 'done' : ''}>Filters</span>
+                </div>
+                {activeAdminView === 'manage' && isEditing && <a className="preview-open-link" href={article.path}>Bekijk artikel</a>}
+              </div>
+            </aside>
+          </div>
+        )}
+
+        {activeAdminView === 'filters' && (
+          <div className="admin-overlay filters-overlay">
+            <section className="admin-panel filter-admin-panel">
+              <div className="panel-title">
+                <span>1</span>
+                <div>
+                  <h2>Filtercategorieën</h2>
+                  <p>Maak nieuwe filterthema's aan, pas labels aan of voeg opties toe.</p>
+                </div>
+              </div>
+              <div className="new-filter-group-box">
+                <h3>Nieuwe filtercategorie</h3>
+                <div className="new-filter-group-grid">
+                  <label>
+                    Naam
+                    <input
+                      value={newFilterGroup.label}
+                      onChange={(event) => setNewFilterGroup((current) => ({ ...current, label: event.target.value }))}
+                      placeholder="Bijvoorbeeld: Werkvorm"
+                    />
+                  </label>
+                  <label>
+                    Eerste optie
+                    <input
+                      value={newFilterGroup.option}
+                      onChange={(event) => setNewFilterGroup((current) => ({ ...current, option: event.target.value }))}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          addFilterGroup()
+                        }
+                      }}
+                      placeholder="Bijvoorbeeld: gesprek"
+                    />
+                  </label>
+                  <button type="button" onClick={addFilterGroup}>Categorie toevoegen</button>
+                </div>
+              </div>
+              <div className="filter-manager">
+                {draftFilterGroups.map((group) => (
+                  <div className="filter-editor-group" key={group.key}>
+                    <label className="filter-name-row">
+                      Filtercategorie
+                      <input value={group.label} onChange={(event) => updateFilterGroupLabel(group.key, event.target.value)} />
+                    </label>
+                    {group.options.map((option, index) => (
+                      <label className="filter-edit-row" key={`${group.key}-${index}`}>
+                        <span>Optie {index + 1}</span>
+                        <input value={option} onChange={(event) => updateFilterOption(group.key, index, event.target.value)} />
+                      </label>
+                    ))}
+                    <div className="add-filter-row">
+                      <input
+                        value={newFilterValues[group.key] || ''}
+                        onChange={(event) => updateNewFilterValue(group.key, event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            addFilterOption(group.key)
+                          }
+                        }}
+                        placeholder={`Nieuwe ${group.label.toLowerCase()}`}
+                      />
+                      <button type="button" onClick={() => addFilterOption(group.key)}>Toevoegen</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="save-filters-button" type="button" onClick={saveFilters}>
+                Filters opslaan
+              </button>
+            </section>
+
+            <aside className="admin-panel filter-summary-panel">
+              <div className="panel-title">
+                <span>2</span>
+                <div>
+                  <h2>Overzicht</h2>
+                  <p>Dit zijn de opties die gebruikers straks zien.</p>
+                </div>
+              </div>
+              {draftFilterGroups.map((group) => (
+                <div className="filter-summary-group" key={group.key}>
+                  <h3>{group.label}</h3>
+                  <div className="cms-chip-row">
+                    {group.options.filter(Boolean).map((option) => (
+                      <span key={option}>{option}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </aside>
+          </div>
+        )}
+            </div>
+    </section>
+  )
+}
+
+function BlogPost({ post, filterGroups }) {
+  const tags = filterGroups.flatMap((group) => post[group.key] || [])
+  const contentParagraphs = (post.content || '')
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
 
   return (
     <section className="post-page">
@@ -399,14 +963,20 @@ function BlogPost({ post }) {
           ))}
         </div>
         <div className="post-content">
-          <p>
-            Dit is voorbeeldinhoud voor het detail scherm. Hier kan later de volledige blogtekst komen, met concrete tips,
-            reflectievragen of kleine oefeningen die passen bij de gekozen leeftijd, het thema en het doel.
-          </p>
-          <p>
-            De pagina is nu gekoppeld aan de blogkaarten en werkt voor alle testblogs. Daardoor kun je de navigatie,
-            filters en detailweergave al goed testen terwijl de definitieve inhoud nog wordt geschreven.
-          </p>
+          {contentParagraphs.length > 0 ? (
+            contentParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+          ) : (
+            <>
+              <p>
+                Dit is voorbeeldinhoud voor het detail scherm. Hier kan later de volledige blogtekst komen, met concrete tips,
+                reflectievragen of kleine oefeningen die passen bij de gekozen leeftijd, het thema en het doel.
+              </p>
+              <p>
+                De pagina is nu gekoppeld aan de blogkaarten en werkt voor alle testblogs. Daardoor kun je de navigatie,
+                filters en detailweergave al goed testen terwijl de definitieve inhoud nog wordt geschreven.
+              </p>
+            </>
+          )}
         </div>
         <ShareBlock url={`https://meeinhetverhaal.be${post.path}`} />
       </article>
