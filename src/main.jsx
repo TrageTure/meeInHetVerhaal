@@ -1,5 +1,14 @@
 import React, { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import {
+  fetchBlogData,
+  getSession,
+  isConfigured,
+  saveBlogPost,
+  saveFilters as saveSupabaseFilters,
+  signIn,
+  signOut,
+} from './blogApi'
 import './styles.css'
 
 const navItems = [
@@ -252,11 +261,14 @@ function normalizePath(path) {
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [managedPosts, setManagedPosts] = useState(getStoredPosts)
-  const [siteFilterGroups, setSiteFilterGroups] = useState(getStoredFilterGroups)
+  const [allPosts, setAllPosts] = useState(posts)
+  const [audiences, setAudiences] = useState([])
+  const [siteFilterGroups, setSiteFilterGroups] = useState(defaultFilterGroups)
+  const [session, setSession] = useState(null)
+  const [dataStatus, setDataStatus] = useState(isConfigured() ? 'loading' : 'missing-config')
+  const [dataError, setDataError] = useState('')
   const [currentPath, setCurrentPath] = useState(window.location.pathname)
   const path = normalizePath(currentPath)
-  const allPosts = useMemo(() => mergeManagedPosts(managedPosts, posts), [managedPosts])
   const pageTitle = useMemo(() => {
     if (path === '/') return 'Mee in het verhaal'
     if (path === '/blog' || path.startsWith('/blog/voor-')) return 'Blog | Mee in het verhaal'
@@ -267,63 +279,45 @@ function App() {
     return post ? post.title : 'Mee in het verhaal'
   }, [path, allPosts])
 
-  function savePost(article, originalPath) {
-    const config = getCategoryConfig(article.category)
-    let pathForPost = article.path
-    if (!pathForPost) {
-      const baseSlug = slugify(article.title) || `artikel-${Date.now()}`
-      const usedPaths = new Set(allPosts.map((post) => post.path))
-      let slug = baseSlug
-      let counter = 2
-      while (usedPaths.has(`/blog/${slug}`)) {
-        slug = `${baseSlug}-${counter}`
-        counter += 1
-      }
-      pathForPost = `/blog/${slug}`
+  async function loadBlogData() {
+    if (!isConfigured()) {
+      setDataStatus('missing-config')
+      return
     }
-    const savedPost = {
-      ...article,
-      ...config,
-      path: pathForPost,
-      originalPath: originalPath || article.originalPath || pathForPost,
-      intro: article.intro.trim(),
-      content: article.content.trim(),
-      updatedAt: new Date().toISOString(),
+    setDataStatus('loading')
+    setDataError('')
+    try {
+      const [blogData, activeSession] = await Promise.all([fetchBlogData(), getSession()])
+      setAudiences(blogData.audiences)
+      setAllPosts(blogData.posts)
+      setSiteFilterGroups(blogData.filterGroups)
+      setSession(activeSession)
+      setDataStatus('ready')
+    } catch (error) {
+      setDataError(error.message || 'De blogdata kon niet geladen worden.')
+      setDataStatus('error')
     }
-    setManagedPosts((current) => {
-      const matchPath = originalPath || savedPost.originalPath || savedPost.path
-      const exists = current.some((post) => (post.originalPath || post.path) === matchPath)
-      const next = exists
-        ? current.map((post) => ((post.originalPath || post.path) === matchPath ? savedPost : post))
-        : [savedPost, ...current]
-      window.localStorage.setItem('meeinhetverhaal.posts', JSON.stringify(next))
-      return next
-    })
-    window.history.pushState({}, '', savedPost.path)
+  }
+
+  async function savePost(article, originalPath) {
+    const savedPath = await saveBlogPost(article, originalPath, allPosts, audiences, siteFilterGroups)
+    await loadBlogData()
+    window.history.pushState({}, '', savedPath)
     window.dispatchEvent(new Event('popstate'))
   }
 
-  function saveFilterGroups(groups, filterChanges = []) {
-    setSiteFilterGroups(groups)
-    window.localStorage.setItem('meeinhetverhaal.filters', JSON.stringify(groups))
-    if (filterChanges.length > 0) {
-      const migratedPosts = allPosts.map((post) => {
-        const migratedPost = { ...post, originalPath: post.originalPath || post.path }
-        filterChanges.forEach(({ groupKey, from, to }) => {
-          if (from && to && from !== to && migratedPost[groupKey]?.includes(from)) {
-            migratedPost[groupKey] = migratedPost[groupKey].map((value) => (value === from ? to : value))
-          }
-        })
-        return migratedPost
-      })
-      setManagedPosts(migratedPosts)
-      window.localStorage.setItem('meeinhetverhaal.posts', JSON.stringify(migratedPosts))
-    }
+  async function saveFilterGroups(groups) {
+    await saveSupabaseFilters(groups)
+    await loadBlogData()
   }
 
   React.useEffect(() => {
     document.title = pageTitle
   }, [pageTitle])
+
+  React.useEffect(() => {
+    loadBlogData()
+  }, [])
 
   React.useEffect(() => {
     function handleRouteChange() {
@@ -339,8 +333,28 @@ function App() {
       <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       <main>
         {path === '/' && <Home />}
-        {(path === '/blog' || path === '/blog/' || path.startsWith('/blog/voor-')) && <BlogList path={window.location.pathname} posts={allPosts} filterGroups={siteFilterGroups} />}
-        {path === '/beheer' && <AdminCMS posts={allPosts} filterGroups={siteFilterGroups} onSavePost={savePost} onSaveFilterGroups={saveFilterGroups} />}
+        {(path === '/blog' || path === '/blog/' || path.startsWith('/blog/voor-')) && <BlogList path={window.location.pathname} posts={allPosts} filterGroups={siteFilterGroups} isLoading={dataStatus === 'loading'} />}
+        {path === '/beheer' && (
+          <AdminCMS
+            posts={allPosts}
+            filterGroups={siteFilterGroups}
+            audiences={audiences}
+            session={session}
+            dataStatus={dataStatus}
+            dataError={dataError}
+            onLogin={async (email, password) => {
+              const activeSession = await signIn(email, password)
+              setSession(activeSession)
+              await loadBlogData()
+            }}
+            onLogout={async () => {
+              await signOut()
+              setSession(null)
+            }}
+            onSavePost={savePost}
+            onSaveFilterGroups={saveFilterGroups}
+          />
+        )}
         {path === '/over-jorane' && <About />}
         {path === '/contact' && <Contact />}
         {allPosts.some((post) => post.path === path) && <BlogPost post={allPosts.find((post) => post.path === path)} filterGroups={siteFilterGroups} />}
@@ -415,7 +429,7 @@ function Home() {
   )
 }
 
-function BlogList({ path, posts: blogPosts, filterGroups }) {
+function BlogList({ path, posts: blogPosts, filterGroups, isLoading }) {
   const [filters, setFilters] = useState(() => getEmptyFilterState(filterGroups))
   const [filtersOpen, setFiltersOpen] = useState(false)
   const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
@@ -479,7 +493,20 @@ function BlogList({ path, posts: blogPosts, filterGroups }) {
           </div>
         </div>
         <div className="posts-grid">
-          {visiblePosts.map((post) => (
+          {isLoading && Array.from({ length: 6 }).map((_, index) => (
+            <article className="post-card skeleton-card" key={`skeleton-${index}`} aria-hidden="true">
+              <span className="post-thumb skeleton-thumb">
+                <span className="skeleton-wave" />
+              </span>
+              <span className="post-summary">
+                <span className="skeleton-line skeleton-line-small" />
+                <span className="skeleton-line skeleton-line-title" />
+                <span className="skeleton-line" />
+                <span className="skeleton-line skeleton-line-short" />
+              </span>
+            </article>
+          ))}
+          {!isLoading && visiblePosts.map((post) => (
             <a className="post-card" href={post.path} key={post.path}>
               <span className="post-thumb">
                 <img className="post-thumb-bg" src={post.image} alt="" />
@@ -492,7 +519,7 @@ function BlogList({ path, posts: blogPosts, filterGroups }) {
               </span>
             </a>
           ))}
-          {visiblePosts.length === 0 && (
+          {!isLoading && visiblePosts.length === 0 && (
             <p className="empty-results">Geen berichten gevonden voor deze filters.</p>
           )}
         </div>
@@ -544,15 +571,21 @@ function articleFromPost(post, filterGroups) {
   return article
 }
 
-function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilterGroups }) {
+function AdminCMS({ posts: editablePosts, filterGroups, audiences, session, dataStatus, dataError, onLogin, onLogout, onSavePost, onSaveFilterGroups }) {
   const [article, setArticle] = useState(defaultArticle)
   const [selectedPath, setSelectedPath] = useState('')
   const [draftFilterGroups, setDraftFilterGroups] = useState(filterGroups)
   const [newFilterValues, setNewFilterValues] = useState(getEmptyFilterState(filterGroups))
   const [activeAdminView, setActiveAdminView] = useState('new')
   const [newFilterGroup, setNewFilterGroup] = useState({ label: '', option: '' })
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' })
+  const [adminMessage, setAdminMessage] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const isEditing = Boolean(selectedPath)
   const categoryConfig = getCategoryConfig(article.category)
+  const audienceOptions = audiences.length > 0
+    ? audiences.map((audience) => audience.name)
+    : categories.slice(1).map((category) => category.label)
   const previewPost = {
     ...article,
     ...categoryConfig,
@@ -613,10 +646,32 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
     })
   }
 
-  function submitArticle(event) {
+  async function submitLogin(event) {
+    event.preventDefault()
+    setAdminMessage('')
+    setIsSaving(true)
+    try {
+      await onLogin(loginForm.email, loginForm.password)
+    } catch (error) {
+      setAdminMessage(error.message || 'Inloggen is niet gelukt.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function submitArticle(event) {
     event.preventDefault()
     if (!canSave) return
-    onSavePost(article, selectedPath || article.originalPath)
+    setAdminMessage('')
+    setIsSaving(true)
+    try {
+      await onSavePost(article, selectedPath || article.originalPath)
+      setAdminMessage(activeAdminView === 'manage' ? 'Wijzigingen opgeslagen.' : 'Blog gepubliceerd.')
+    } catch (error) {
+      setAdminMessage(error.message || 'Opslaan is niet gelukt.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   function updateFilterOption(groupKey, optionIndex, value) {
@@ -669,7 +724,7 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
     setNewFilterGroup({ label: '', option: '' })
   }
 
-  function saveFilters() {
+  async function saveFilters() {
     const cleanedGroups = draftFilterGroups.map((group) => {
       const uniqueOptions = []
       group.options.forEach((option) => {
@@ -688,7 +743,115 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
         }
       })
     })
-    onSaveFilterGroups(cleanedGroups, filterChanges)
+    setAdminMessage('')
+    setIsSaving(true)
+    try {
+      await onSaveFilterGroups(cleanedGroups, filterChanges)
+      setAdminMessage('Filters opgeslagen.')
+    } catch (error) {
+      setAdminMessage(error.message || 'Filters opslaan is niet gelukt.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (dataStatus === 'missing-config') {
+    return (
+      <section className="admin-section section-bg">
+        <div className="page-width">
+          <div className="admin-heading">
+            <span>Beheer</span>
+            <h1>Supabase instellen</h1>
+            <p>Voeg je Supabase URL en anon key toe aan `.env.local` om het CMS met de database te verbinden.</p>
+          </div>
+          <div className="admin-panel">
+            <code>VITE_SUPABASE_URL=...</code>
+            <code>VITE_SUPABASE_ANON_KEY=...</code>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (dataStatus === 'error') {
+    return (
+      <section className="admin-section section-bg">
+        <div className="page-width">
+          <div className="admin-heading">
+            <span>Beheer</span>
+            <h1>Database niet bereikbaar</h1>
+            <p>{dataError}</p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (dataStatus === 'loading') {
+    return (
+      <section className="admin-section section-bg">
+        <div className="page-width">
+          <div className="admin-heading">
+            <span>Beheer</span>
+            <h1>Beheer laden</h1>
+            <p>We halen je blogs en filters op uit Supabase.</p>
+          </div>
+          <div className="admin-layout admin-overlay">
+            <div className="admin-form">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <section className="admin-panel skeleton-admin-panel" key={index} aria-hidden="true">
+                  <span className="skeleton-line skeleton-line-small" />
+                  <span className="skeleton-line skeleton-line-title" />
+                  <span className="skeleton-input" />
+                  <span className="skeleton-input" />
+                </section>
+              ))}
+            </div>
+            <aside className="admin-preview" aria-hidden="true">
+              <div className="preview-sticky">
+                <div className="preview-label">Live preview</div>
+                <article className="post-card skeleton-card">
+                  <span className="post-thumb skeleton-thumb">
+                    <span className="skeleton-wave" />
+                  </span>
+                  <span className="post-summary">
+                    <span className="skeleton-line skeleton-line-small" />
+                    <span className="skeleton-line skeleton-line-title" />
+                    <span className="skeleton-line" />
+                  </span>
+                </article>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  if (!session) {
+    return (
+      <section className="admin-section section-bg">
+        <div className="page-width admin-login-layout">
+          <div className="admin-heading">
+            <span>Beheer</span>
+            <h1>Inloggen</h1>
+            <p>Log in om blogs en filters te beheren.</p>
+          </div>
+          <form className="admin-panel admin-login-panel" onSubmit={submitLogin}>
+            <label className="admin-field">
+              E-mailadres
+              <input type="email" value={loginForm.email} onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))} />
+            </label>
+            <label className="admin-field">
+              Wachtwoord
+              <input type="password" value={loginForm.password} onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))} />
+            </label>
+            {adminMessage && <p className="admin-message">{adminMessage}</p>}
+            <button className="publish-button admin-login-button" type="submit" disabled={isSaving}>{isSaving ? 'Bezig...' : 'Inloggen'}</button>
+          </form>
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -698,6 +861,11 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
           <span>Beheer</span>
           <h1>{activeAdminView === 'new' ? 'Nieuwe blog aanmaken' : activeAdminView === 'manage' ? 'Bestaande blogs beheren' : 'Filters beheren'}</h1>
           <p>{activeAdminView === 'new' ? 'Schrijf een nieuw artikel in een rustige editor met live preview.' : activeAdminView === 'manage' ? 'Kies een bestaande blog, pas hem aan en bekijk meteen hoe de kaart eruitziet.' : 'Voeg filteropties toe of hernoem bestaande filters zonder de artikel-editor te openen.'}</p>
+        </div>
+
+        <div className="admin-session-row">
+          <span>Ingelogd als {session.user.email}</span>
+          <button type="button" onClick={onLogout}>Uitloggen</button>
         </div>
 
         <div className="admin-view-switch" aria-label="Beheer wisselen">
@@ -711,6 +879,7 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
             Filters
           </button>
         </div>
+        {adminMessage && <p className="admin-message">{adminMessage}</p>}
 
         {(activeAdminView === 'new' || activeAdminView === 'manage') && (
           <div className="admin-layout admin-overlay">
@@ -755,8 +924,8 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
                 <label className="admin-field">
                   Doelgroep
                   <select value={article.category} onChange={(event) => updateField('category', event.target.value)}>
-                    {categories.slice(1).map((category) => (
-                      <option key={category.label} value={category.label}>{category.label}</option>
+                    {audienceOptions.map((audienceName) => (
+                      <option key={audienceName} value={audienceName}>{audienceName}</option>
                     ))}
                   </select>
                 </label>
@@ -804,7 +973,7 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
 
               <div className="admin-actions">
                 <button type="button" onClick={activeAdminView === 'manage' ? openManageArticles : startNewArticle}>{activeAdminView === 'manage' ? 'Herlaad selectie' : 'Leegmaken'}</button>
-                <button className="publish-button" type="submit" disabled={!canSave}>{activeAdminView === 'manage' ? 'Wijzigingen opslaan' : 'Publiceren'}</button>
+                <button className="publish-button" type="submit" disabled={!canSave || isSaving}>{isSaving ? 'Opslaan...' : activeAdminView === 'manage' ? 'Wijzigingen opslaan' : 'Publiceren'}</button>
               </div>
             </form>
 
@@ -902,8 +1071,8 @@ function AdminCMS({ posts: editablePosts, filterGroups, onSavePost, onSaveFilter
                   </div>
                 ))}
               </div>
-              <button className="save-filters-button" type="button" onClick={saveFilters}>
-                Filters opslaan
+              <button className="save-filters-button" type="button" onClick={saveFilters} disabled={isSaving}>
+                {isSaving ? 'Opslaan...' : 'Filters opslaan'}
               </button>
             </section>
 
