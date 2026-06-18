@@ -2,8 +2,7 @@ import React, { useState } from 'react'
 import { categories } from '../data'
 import { getEmptyFilterState } from '../utils'
 
-export function BlogList({ path, posts: blogPosts, filterGroups, isLoading }) {
-  const [filters, setFilters] = useState(() => getEmptyFilterState(filterGroups))
+export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFilters, isLoading }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
   const categoryPosts = activeCategory === 'Alle berichten' ? blogPosts : blogPosts.filter((post) => post.category === activeCategory)
@@ -130,7 +129,7 @@ export function FilterControls({ filterGroups, filters, toggleFilter, clearFilte
   )
 }
 
-export function BlogPost({ post, filterGroups }) {
+export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
   const tags = filterGroups.flatMap((group) => post[group.key] || [])
   const contentParagraphs = (post.content || '')
     .split(/\n+/)
@@ -140,8 +139,8 @@ export function BlogPost({ post, filterGroups }) {
   return (
     <section className="post-page">
       <article className="page-width post-article">
-        <a className="back-link" href="/blog/">
-          <span aria-hidden="true">‹</span> Alle berichten
+        <a className="back-link" href={backPath}>
+          <span aria-hidden="true">‹</span> Terug naar overzicht
         </a>
         <div className="detail-hero">
           <div className="detail-image">

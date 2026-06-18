@@ -49,6 +49,7 @@ export function Footer() {
           <a href="https://instagram.com/meeinhetverhaal.be" target="_blank" rel="noreferrer" aria-label="Bezoek ons Instagram-profiel"><SocialInstagram /></a>
         </div>
         <p>Copyright © Alle rechten voorbehouden</p>
+        <a className="footer-privacy-link" href="/privacy">Privacyverklaring</a>
       </div>
     </footer>
   )

@@ -98,7 +98,7 @@ a {
 }
 
 .page-width {
-  width: 1180px;
+  width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
 }
 
@@ -117,7 +117,7 @@ a {
 }
 
 .desktop-nav {
-  width: 1180px;
+  width: min(1180px, calc(100% - 48px));
   height: 98px;
   margin: 0 auto;
   padding-top: 32px;
@@ -1816,10 +1816,221 @@ a {
   line-height: 1.4;
 }
 
+.footer-privacy-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #3c3c3c;
+  font-size: 15px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-privacy-link:hover,
+.footer-privacy-link:focus-visible {
+  color: #8fb4a0;
+}
+
+.privacy-section {
+  padding: 64px 0 88px;
+}
+
+.privacy-page {
+  max-width: 920px;
+}
+
+.privacy-page > span {
+  display: block;
+  margin-bottom: 12px;
+  color: #8fb4a0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.privacy-page h1 {
+  margin: 0 0 18px;
+  font-size: 48px;
+  line-height: 1.1;
+}
+
+.privacy-intro {
+  max-width: 720px;
+  margin: 0 0 34px;
+  color: #3c3c3c;
+  font-size: 19px;
+  line-height: 1.7;
+}
+
+.privacy-page article {
+  max-width: 780px;
+  border-top: 1px solid rgba(60, 60, 60, 0.1);
+  padding: 26px 0 4px;
+}
+
+.privacy-page h2 {
+  margin: 0 0 12px;
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.privacy-page p,
+.privacy-page li {
+  color: #3c3c3c;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.privacy-page p {
+  margin: 0 0 14px;
+}
+
+.privacy-page ul {
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
+@media (max-width: 1180px) {
+  .site-header {
+    min-height: 126px;
+  }
+
+  .desktop-nav {
+    height: 86px;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .desktop-nav a {
+    padding: 0 24px;
+  }
+
+  .home-hero-grid {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    gap: 52px;
+  }
+
+  .home-hero-copy h1 {
+    font-size: 48px;
+  }
+
+  .home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-tile {
+    min-height: 0;
+    aspect-ratio: 289 / 333;
+  }
+
+  .blog-toolbar {
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .category-pills {
+    max-width: none;
+    flex: 1 1 auto;
+  }
+
+  .category-pills a {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+
+  .posts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 24px;
+  }
+
+  .detail-hero {
+    grid-template-columns: minmax(360px, 0.95fr) minmax(0, 1fr);
+    gap: 34px;
+  }
+
+  .about-simple {
+    grid-template-columns: 330px minmax(0, 1fr);
+    gap: 44px;
+  }
+
+  .contact-form {
+    width: min(958px, 100%);
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .site-header {
+    min-height: 98px;
+  }
+
+  .desktop-nav {
+    justify-content: center;
+  }
+
+  .desktop-nav a {
+    padding: 0 18px;
+  }
+
+  .home-hero-grid,
+  .about-simple,
+  .detail-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .home-portrait,
+  .about-portrait {
+    width: min(390px, 100%);
+  }
+
+  .home-hero-grid {
+    gap: 32px;
+  }
+
+  .blog-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+
+  .category-pills {
+    gap: 10px;
+  }
+
+  .filter-toggle {
+    min-width: 150px;
+  }
+
+  .filter-panel {
+    right: 0;
+  }
+
+  .posts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 26px 18px;
+  }
+
+  .post-title {
+    font-size: 22px;
+  }
+
+  .post-summary {
+    padding: 20px;
+  }
+
+  .admin-layout,
+  .filters-overlay {
+    display: block;
+  }
+
+  .admin-preview,
+  .filter-summary-panel {
+    position: static;
+    margin-top: 24px;
+  }
+}
+
 @media (max-width: 650px) {
   .page-width {
     width: 100%;
-    max-width: 650px;
     padding: 0 18px;
   }
 
@@ -1939,6 +2150,18 @@ a {
     font-size: 36px;
   }
 
+  .privacy-section {
+    padding: 42px 0 58px;
+  }
+
+  .privacy-page h1 {
+    font-size: 36px;
+  }
+
+  .privacy-intro {
+    font-size: 16px;
+  }
+
   .about-copy p {
     font-size: 16px;
   }
@@ -1979,8 +2202,28 @@ a {
   }
 
   .category-pills {
+    display: flex;
+    flex-wrap: nowrap;
     gap: 8px;
-    margin-bottom: 16px;
+    margin: 0 -18px 16px;
+    overflow-x: auto;
+    padding: 0 18px 8px;
+    scroll-padding-inline: 18px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .category-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-pills::after {
+    content: '';
+    flex: 0 0 10px;
+  }
+
+  .category-pills a {
+    flex: 0 0 auto;
   }
 
   .category-pills a {

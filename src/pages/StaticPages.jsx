@@ -181,3 +181,90 @@ export function Contact({ onSubmitContact }) {
     </section>
   )
 }
+
+export function Privacy() {
+  return (
+    <section className="privacy-section section-bg">
+      <div className="page-width privacy-page">
+        <span>Privacy</span>
+        <h1>Privacyverklaring</h1>
+        <p className="privacy-intro">
+          Mee in het verhaal gaat zorgvuldig om met persoonsgegevens. Op deze pagina lees je welke gegevens verwerkt
+          worden, waarom dat gebeurt en welke rechten je hebt.
+        </p>
+
+        <article>
+          <h2>Welke gegevens verwerken we?</h2>
+          <p>
+            Wanneer je het contactformulier gebruikt, verwerken we je naam, e-mailadres, bericht en je keuze rond updates.
+            Deze gegevens zijn nodig om je vraag te kunnen ontvangen en beantwoorden.
+          </p>
+          <p>
+            Wanneer je als beheerder inlogt op de beheeromgeving, verwerkt Supabase gegevens die nodig zijn voor
+            authenticatie en het beheren van blogartikels en filters.
+          </p>
+        </article>
+
+        <article>
+          <h2>Waarom verwerken we deze gegevens?</h2>
+          <p>We gebruiken persoonsgegevens alleen voor deze doelen:</p>
+          <ul>
+            <li>om contactvragen te ontvangen en te beantwoorden;</li>
+            <li>om gevraagde updates te kunnen opvolgen wanneer je daar zelf voor kiest;</li>
+            <li>om de blog en beheeromgeving technisch te laten werken;</li>
+            <li>om misbruik of spam te beperken.</li>
+          </ul>
+        </article>
+
+        <article>
+          <h2>Welke diensten gebruiken we?</h2>
+          <p>
+            Het contactformulier wordt verwerkt via FormSubmit. FormSubmit stuurt de inhoud van het formulier door naar
+            de mailbox van Mee in het verhaal. Antwoorden verlopen daarna gewoon via e-mail.
+          </p>
+          <p>
+            Blogdata en de beheeromgeving gebruiken Supabase. Supabase bewaart de gegevens die nodig zijn om artikels,
+            filters en beheerlogin te laten werken.
+          </p>
+        </article>
+
+        <article>
+          <h2>Cookies</h2>
+          <p>
+            Deze site gebruikt zelf geen analytische of marketingcookies. Daarom tonen we geen cookiebanner. Alleen
+            technisch noodzakelijke opslag of gegevensverwerking kan plaatsvinden wanneer dat nodig is om de site of de
+            beheeromgeving te laten werken.
+          </p>
+        </article>
+
+        <article>
+          <h2>Hoe lang bewaren we gegevens?</h2>
+          <p>
+            Contactberichten worden bewaard zolang nodig is om je vraag te behandelen of zolang dat praktisch nodig is
+            voor opvolging. Je kan altijd vragen om je gegevens te laten verwijderen.
+          </p>
+        </article>
+
+        <article>
+          <h2>Jouw rechten</h2>
+          <p>
+            Je kan vragen om je gegevens in te kijken, te verbeteren of te verwijderen. Je kan ook bezwaar maken tegen
+            verdere verwerking wanneer daar een geldige reden voor is.
+          </p>
+          <p>
+            Wil je een privacyvraag stellen of je gegevens laten aanpassen of verwijderen? Neem contact op via de
+            contactpagina.
+          </p>
+        </article>
+
+        <article>
+          <h2>Wijzigingen</h2>
+          <p>
+            Deze privacyverklaring kan worden aangepast wanneer de website of gebruikte diensten veranderen. Laatste
+            update: 18 juni 2026.
+          </p>
+        </article>
+      </div>
+    </section>
+  )
+}
