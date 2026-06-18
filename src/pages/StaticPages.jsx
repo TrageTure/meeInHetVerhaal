@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { homeTiles } from '../data'
 
 export function Home() {
@@ -70,35 +70,112 @@ export function About() {
   )
 }
 
-export function Contact() {
+export function Contact({ onSubmitContact }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    message: '',
+    marketingConsent: false,
+    website: '',
+  })
+  const [status, setStatus] = useState('idle')
+  const [feedback, setFeedback] = useState('')
+  const canSubmit = form.name.trim() && form.email.trim() && form.message.trim() && status !== 'sending'
+
+  function updateForm(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submitForm(event) {
+    event.preventDefault()
+    if (!canSubmit) return
+    if (form.website.trim()) {
+      setStatus('success')
+      setFeedback('Dankjewel, je bericht is verstuurd.')
+      return
+    }
+
+    setStatus('sending')
+    setFeedback('')
+    try {
+      await onSubmitContact(form)
+      setStatus('success')
+      setFeedback('Dankjewel, je bericht is verstuurd.')
+      setForm({
+        name: '',
+        email: '',
+        message: '',
+        marketingConsent: false,
+        website: '',
+      })
+    } catch (error) {
+      setStatus('error')
+      setFeedback(error.message || 'Verzenden is niet gelukt. Probeer het straks opnieuw.')
+    }
+  }
+
   return (
     <section className="contact-section section-bg">
       <div className="page-width">
         <div className="wave-crop">
           <img src="/assets/golf-c3d8cb.png" alt="" />
         </div>
-        <form className="contact-form" onSubmit={(event) => event.preventDefault()}>
+        <form className="contact-form" onSubmit={submitForm}>
           <label>
             Jouw naam *
-            <input type="text" name="naam" autoComplete="name" />
+            <input
+              type="text"
+              name="naam"
+              autoComplete="name"
+              value={form.name}
+              onChange={(event) => updateForm('name', event.target.value)}
+              required
+            />
           </label>
           <label>
             Jouw e-mailadres *
-            <input type="email" name="email" autoComplete="email" />
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={(event) => updateForm('email', event.target.value)}
+              required
+            />
           </label>
           <label>
             Jouw bericht *
-            <textarea name="bericht" />
+            <textarea
+              name="bericht"
+              value={form.message}
+              onChange={(event) => updateForm('message', event.target.value)}
+              required
+            />
+          </label>
+          <label className="contact-honeypot" aria-hidden="true">
+            Website
+            <input
+              type="text"
+              name="website"
+              tabIndex="-1"
+              autoComplete="off"
+              value={form.website}
+              onChange={(event) => updateForm('website', event.target.value)}
+            />
           </label>
           <label className="marketing">
-            <input type="checkbox" name="marketing" />
-            <span>Ja, ik ontvang graag nieuws over aanbiedingen.</span>
+            <input
+              type="checkbox"
+              name="marketing"
+              checked={form.marketingConsent}
+              onChange={(event) => updateForm('marketingConsent', event.target.checked)}
+            />
+            <span>Ja, ik ontvang graag updates van Mee in het verhaal.</span>
           </label>
-          <div className="captcha-row">
-            <span className="shield">♡</span>
-            <a href="https://friendlycaptcha.com" target="_blank" rel="noreferrer">Friendly Captcha</a>
-          </div>
-          <button className="submit-button" type="submit">Verzenden</button>
+          {feedback && <p className={`contact-feedback ${status === 'error' ? 'error' : 'success'}`}>{feedback}</p>}
+          <button className="submit-button" type="submit" disabled={!canSubmit}>
+            {status === 'sending' ? 'Verzenden...' : 'Verzenden'}
+          </button>
         </form>
       </div>
     </section>

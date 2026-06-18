@@ -16,7 +16,18 @@ export function articleFromPost(post, filterGroups) {
   return article
 }
 
-export function AdminCMS({ posts: editablePosts, filterGroups, audiences, session, dataStatus, dataError, onLogin, onLogout, onSavePost, onSaveFilterGroups }) {
+export function AdminCMS({
+  posts: editablePosts,
+  filterGroups,
+  audiences,
+  session,
+  dataStatus,
+  dataError,
+  onLogin,
+  onLogout,
+  onSavePost,
+  onSaveFilterGroups,
+}) {
   const [article, setArticle] = useState(defaultArticle)
   const [selectedPath, setSelectedPath] = useState('')
   const [draftFilterGroups, setDraftFilterGroups] = useState(filterGroups)
@@ -39,6 +50,16 @@ export function AdminCMS({ posts: editablePosts, filterGroups, audiences, sessio
   }
   const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
   const canSave = article.title.trim() && article.intro.trim() && (isEditing || article.content.trim()) && hasEveryFilterGroup
+  const adminViewTitle = {
+    new: 'Nieuwe blog aanmaken',
+    manage: 'Bestaande blogs beheren',
+    filters: 'Filters beheren',
+  }[activeAdminView]
+  const adminViewDescription = {
+    new: 'Schrijf een nieuw artikel in een rustige editor met live preview.',
+    manage: 'Kies een bestaande blog, pas hem aan en bekijk meteen hoe de kaart eruitziet.',
+    filters: 'Voeg filteropties toe of hernoem bestaande filters zonder de artikel-editor te openen.',
+  }[activeAdminView]
 
   React.useEffect(() => {
     setDraftFilterGroups(filterGroups)
@@ -304,8 +325,8 @@ export function AdminCMS({ posts: editablePosts, filterGroups, audiences, sessio
       <div className="page-width">
         <div className="admin-heading">
           <span>Beheer</span>
-          <h1>{activeAdminView === 'new' ? 'Nieuwe blog aanmaken' : activeAdminView === 'manage' ? 'Bestaande blogs beheren' : 'Filters beheren'}</h1>
-          <p>{activeAdminView === 'new' ? 'Schrijf een nieuw artikel in een rustige editor met live preview.' : activeAdminView === 'manage' ? 'Kies een bestaande blog, pas hem aan en bekijk meteen hoe de kaart eruitziet.' : 'Voeg filteropties toe of hernoem bestaande filters zonder de artikel-editor te openen.'}</p>
+          <h1>{adminViewTitle}</h1>
+          <p>{adminViewDescription}</p>
         </div>
 
         <div className="admin-session-row">

@@ -1692,6 +1692,12 @@ a {
   color: #000;
 }
 
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: 0;
+  border-color: #8fb4a0;
+}
+
 .contact-form textarea {
   height: 122px;
   resize: vertical;
@@ -1708,24 +1714,31 @@ a {
   margin-top: 2px;
 }
 
-.captcha-row {
-  width: 304px;
-  height: 72px;
-  margin-top: 20px;
-  border: 1px solid #d7d7d7;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 16px;
-  color: #000;
+.contact-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
-.shield {
-  font-size: 28px;
+.contact-feedback {
+  margin: 18px 0 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  line-height: 1.45;
 }
 
-.captcha-row a {
-  text-decoration: underline;
+.contact-feedback.success {
+  border: 1px solid rgba(195, 216, 203, 0.9);
+  background: rgba(195, 216, 203, 0.22);
+  color: #3c3c3c;
+}
+
+.contact-feedback.error {
+  border: 1px solid rgba(238, 139, 99, 0.45);
+  background: rgba(238, 139, 99, 0.12);
+  color: #70351f;
 }
 
 .submit-button {
@@ -1739,11 +1752,18 @@ a {
   cursor: pointer;
 }
 
-.submit-button:hover,
-.submit-button:focus-visible {
+.submit-button:hover:not(:disabled),
+.submit-button:focus-visible:not(:disabled) {
   background: #e7c198;
   transform: translateY(-1px);
   box-shadow: 0 10px 24px rgba(60, 60, 60, 0.08);
+}
+
+.submit-button:disabled {
+  background: #efd2b3;
+  color: rgba(60, 60, 60, 0.52);
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .site-footer {
@@ -1758,12 +1778,19 @@ a {
 }
 
 .footer-logo {
-  display: block;
+  display: inline-block;
   width: 330px;
-  height: 60px;
-  overflow: hidden;
-  color: transparent;
-  font-size: 0;
+  min-height: 60px;
+  color: #3c3c3c;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.05;
+  text-decoration: none;
+}
+
+.footer-logo:hover,
+.footer-logo:focus-visible {
+  color: #8fb4a0;
 }
 
 .socials {
@@ -1771,7 +1798,7 @@ a {
   height: 40px;
   margin-top: 20px;
   display: flex;
-  gap: 0;
+  gap: 16px;
 }
 
 .socials a,
@@ -2108,11 +2135,6 @@ a {
     margin: 28px 0 0;
   }
 
-  .captcha-row {
-    width: 100%;
-    max-width: 304px;
-  }
-
   .site-footer {
     min-height: 220px;
     padding-bottom: 35px;
@@ -2126,6 +2148,7 @@ a {
   .site-footer p {
     width: 100%;
     text-align: center;
+    color: #3c3c3c;
   }
 
   .socials {

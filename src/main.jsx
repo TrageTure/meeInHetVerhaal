@@ -9,6 +9,7 @@ import {
   signIn,
   signOut,
 } from './blogApi'
+import { sendContactEmail } from './contactApi'
 import { defaultFilterGroups, posts } from './data'
 import { Header, Footer } from './components/Layout'
 import { Home, About, Contact } from './pages/StaticPages'
@@ -114,7 +115,7 @@ function App() {
           />
         )}
         {path === '/over-jorane' && <About />}
-        {path === '/contact' && <Contact />}
+        {path === '/contact' && <Contact onSubmitContact={sendContactEmail} />}
         {allPosts.some((post) => post.path === path) && <BlogPost post={allPosts.find((post) => post.path === path)} filterGroups={siteFilterGroups} />}
         {!isKnownPath(path, allPosts) && <Home />}
       </main>
