@@ -1568,6 +1568,31 @@ a {
   font-weight: 700;
 }
 
+.copy-link-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.copy-link-feedback {
+  min-width: 82px;
+  color: #8fb4a0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.copy-link-feedback.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .share-block a:hover,
 .share-block a:focus-visible,
 .share-block button:hover,

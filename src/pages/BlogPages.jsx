@@ -181,13 +181,50 @@ export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
 }
 
 export function ShareBlock({ url }) {
+  const [copied, setCopied] = useState(false)
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      const textArea = document.createElement('textarea')
+      textArea.value = url
+      textArea.setAttribute('readonly', '')
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    }
+  }
+
   return (
     <div className="share-block">
       <span>Delen op:</span>
       <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`} aria-label="Deel dit bericht op Facebook">f</a>
       <a href={`https://twitter.com/share?url=${encodeURIComponent(url)}`} aria-label="Deel dit bericht op X">𝕏</a>
       <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`} aria-label="Deel dit bericht op LinkedIn">in</a>
-      <button type="button" onClick={() => navigator.clipboard?.writeText(url)} aria-label="Kopieer link naar dit bericht">⌁</button>
+      <button className="copy-link-button" type="button" onClick={copyLink} aria-label="Kopieer link naar dit bericht">
+        <LinkIcon />
+      </button>
+      <span className={`copy-link-feedback ${copied ? 'is-visible' : ''}`} aria-live="polite">
+        Gekopieerd
+      </span>
     </div>
+  )
+}
+
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M9.6 8H7.2a4 4 0 0 0 0 8h2.4" />
+      <path d="M14.4 8h2.4a4 4 0 0 1 0 8h-2.4" />
+      <path d="M8.6 12h6.8" />
+    </svg>
   )
 }
