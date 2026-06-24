@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { categories } from '../data'
 import { isRichTextEmpty, sanitizeRichText } from '../richText'
-import { getEmptyFilterState } from '../utils'
+import { getAudienceTone, getEmptyFilterState } from '../utils'
 
 export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFilters, isLoading }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
-  const categoryPosts = activeCategory === 'Alle berichten' ? blogPosts : blogPosts.filter((post) => post.category === activeCategory)
+  const categoryPosts = activeCategory === 'Alle berichten'
+    ? blogPosts
+    : blogPosts.filter((post) => (post.audienceNames || [post.category]).includes(activeCategory))
   const visiblePosts = categoryPosts.filter((post) =>
     filterGroups.every((group) => (filters[group.key] || []).length === 0 || (filters[group.key] || []).some((value) => (post[group.key] || []).includes(value))),
   )
@@ -44,7 +46,11 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
         <div className="blog-toolbar">
           <nav className="category-pills" aria-label="Blogcategorieën">
             {categories.map((category) => (
-              <a className={category.label === activeCategory ? 'selected' : ''} href={category.path} key={category.path}>
+              <a
+                className={`audience-${category.tone} ${category.label === activeCategory ? 'selected' : ''}`}
+                href={category.path}
+                key={category.path}
+              >
                 {category.label}
               </a>
             ))}
@@ -83,10 +89,8 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
             <a className="post-card" href={post.path} key={post.path}>
               <span className="post-thumb">
                 <img className="post-thumb-bg" src={post.image} alt="" />
-                {post.foregroundImage && <img className={`post-thumb-foreground ${post.foregroundClass || ''}`} src={post.foregroundImage} alt="" />}
               </span>
               <span className="post-summary">
-                <span className="post-category-label">{post.category}</span>
                 <span className="post-title">{post.title}</span>
                 <span className="post-description">{post.intro}</span>
               </span>
@@ -144,10 +148,19 @@ export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
         <div className="detail-hero">
           <div className="detail-image">
             <img className="post-thumb-bg" src={post.image} alt="" />
-            {post.foregroundImage && <img className={`post-thumb-foreground ${post.foregroundClass || ''}`} src={post.foregroundImage} alt="" />}
           </div>
           <div className="detail-heading">
-            <a className="post-category" href={post.categoryPath}>{post.category}</a>
+            <div className="post-categories">
+              {(post.audiences || [{ name: post.category, categoryPath: post.categoryPath }]).map((audience) => (
+                <a
+                  className={`post-category audience-${getAudienceTone(audience.name)}`}
+                  href={audience.categoryPath}
+                  key={audience.name}
+                >
+                  {audience.name}
+                </a>
+              ))}
+            </div>
             <h1>{post.title}</h1>
             <p>{post.intro}</p>
           </div>

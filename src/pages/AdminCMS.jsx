@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { categories, defaultArticle } from '../data'
 import { RichTextEditor } from '../components/RichTextEditor'
 import { isRichTextEmpty } from '../richText'
-import { createFilterKey, getCategoryConfig, getEmptyFilterState } from '../utils'
+import { createFilterKey, getAudienceTone, getCategoryConfig, getEmptyFilterState } from '../utils'
 
 export function articleFromPost(post, filterGroups) {
   const article = {
     ...defaultArticle,
     ...post,
     content: post.content || '',
+    audiences: post.audienceNames?.length ? post.audienceNames : [post.category],
     path: post.path,
     originalPath: post.originalPath || post.path,
   }
@@ -31,6 +32,7 @@ export function AdminCMS({
   onSaveFilterGroups,
   siteContent,
   siteContentTableMissing,
+  audienceLinksTableMissing,
   onSaveSiteContent,
 }) {
   const [article, setArticle] = useState(defaultArticle)
@@ -49,8 +51,8 @@ export function AdminCMS({
   const isEditing = Boolean(selectedPath)
   const categoryConfig = getCategoryConfig(article.category)
   const audienceOptions = audiences.length > 0
-    ? audiences.map((audience) => audience.name)
-    : categories.slice(1).map((category) => category.label)
+    ? audiences
+    : categories.slice(1).map((category) => ({ name: category.label, slug: category.tone }))
   const previewPost = {
     ...article,
     ...categoryConfig,
@@ -58,8 +60,9 @@ export function AdminCMS({
     intro: article.intro || 'Schrijf hier een korte beschrijving die gezinnen, leerkrachten of zorgverleners meteen helpt begrijpen waar dit artikel over gaat.',
   }
   const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
+  const hasAudience = (article.audiences || []).length > 0
   const hasArticleContent = !isRichTextEmpty(article.content)
-  const canSave = article.title.trim() && article.intro.trim() && hasArticleContent && hasEveryFilterGroup
+  const canSave = article.title.trim() && article.intro.trim() && hasArticleContent && hasEveryFilterGroup && hasAudience
   const canSaveSiteContent = Object.values(draftSiteContent).every((page) => page.title.trim() && page.body.trim())
   const adminViewTitle = {
     new: 'Nieuwe blog aanmaken',
@@ -119,6 +122,23 @@ export function AdminCMS({
 
   function updateField(field, value) {
     setArticle((current) => ({ ...current, [field]: value }))
+  }
+
+  function toggleAudience(audienceName) {
+    setArticle((current) => {
+      const currentAudiences = current.audiences || []
+      const nextAudiences = currentAudiences.includes(audienceName)
+        ? currentAudiences.filter((item) => item !== audienceName)
+        : [...currentAudiences, audienceName]
+
+      return {
+        ...current,
+        audiences: nextAudiences,
+        category: nextAudiences.includes(current.category)
+          ? current.category
+          : nextAudiences[0] || current.category,
+      }
+    })
   }
 
   function toggleCmsChip(groupKey, value) {
@@ -394,6 +414,11 @@ export function AdminCMS({
           </button>
         </div>
         {adminMessage && <p className="admin-message">{adminMessage}</p>}
+        {audienceLinksTableMissing && (
+          <p className="admin-message">
+            Voer de nieuwe Supabase-migratie uit voordat je meerdere doelgroepen opslaat.
+          </p>
+        )}
 
         {(activeAdminView === 'new' || activeAdminView === 'manage') && (
           <div className="admin-layout admin-overlay">
@@ -415,7 +440,7 @@ export function AdminCMS({
                         type="button"
                         onClick={() => selectArticle(post.path)}
                       >
-                        <span>{post.category}</span>
+                        <span>{post.audienceNames?.join(' · ') || post.category}</span>
                         {post.title}
                       </button>
                     ))}
@@ -435,14 +460,27 @@ export function AdminCMS({
                   Titel
                   <input value={article.title} onChange={(event) => updateField('title', event.target.value)} placeholder="Bijvoorbeeld: Praten over verdriet" />
                 </label>
-                <label className="admin-field">
-                  Doelgroep
-                  <select value={article.category} onChange={(event) => updateField('category', event.target.value)}>
-                    {audienceOptions.map((audienceName) => (
-                      <option key={audienceName} value={audienceName}>{audienceName}</option>
-                    ))}
-                  </select>
-                </label>
+                <fieldset className="cms-audience-group">
+                  <legend>Doelgroepen</legend>
+                  <p>Kies één of meerdere doelgroepen. De eerste gekozen doelgroep bepaalt de kaartkleur.</p>
+                  <div className="cms-audience-options">
+                    {audienceOptions.map((audience) => {
+                      const tone = audience.slug?.replace('voor-', '') || getAudienceTone(audience.name)
+                      const isActive = (article.audiences || []).includes(audience.name)
+                      return (
+                        <button
+                          className={`audience-option audience-${tone} ${isActive ? 'active' : ''}`}
+                          key={audience.name}
+                          type="button"
+                          aria-pressed={isActive}
+                          onClick={() => toggleAudience(audience.name)}
+                        >
+                          {audience.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </fieldset>
                 <label className="admin-field">
                   Korte beschrijving
                   <textarea value={article.intro} onChange={(event) => updateField('intro', event.target.value)} rows="3" placeholder="Een warme intro van maximaal enkele zinnen." />
@@ -497,10 +535,15 @@ export function AdminCMS({
                 <a className="post-card preview-card" href="/beheer" onClick={(event) => event.preventDefault()}>
                   <span className="post-thumb">
                     <img className="post-thumb-bg" src={previewPost.image} alt="" />
-                    <img className={`post-thumb-foreground ${previewPost.foregroundClass}`} src={previewPost.foregroundImage} alt="" />
                   </span>
                   <span className="post-summary">
-                    <span className="post-category-label">{previewPost.category}</span>
+                    <span className="post-category-labels">
+                      {(article.audiences || []).map((audience) => (
+                        <span className={`post-category-label audience-${getAudienceTone(audience)}`} key={audience}>
+                          {audience}
+                        </span>
+                      ))}
+                    </span>
                     <span className="post-title">{previewPost.title}</span>
                     <span className="post-description">{previewPost.intro}</span>
                   </span>
@@ -508,6 +551,7 @@ export function AdminCMS({
                 <div className="preview-checklist">
                   <span className={article.title.trim() ? 'done' : ''}>Titel</span>
                   <span className={article.intro.trim() ? 'done' : ''}>Beschrijving</span>
+                  <span className={hasAudience ? 'done' : ''}>Doelgroep</span>
                   <span className={hasArticleContent ? 'done' : ''}>Tekst</span>
                   <span className={hasEveryFilterGroup ? 'done' : ''}>Filters</span>
                 </div>

@@ -22,9 +22,6 @@ export function Home({ content }) {
       </section>
       <section className="tile-section home-audience-section section-bg">
         <div className="page-width">
-          <div className="home-section-heading">
-            <h2>Waar wil je mee starten?</h2>
-          </div>
           <div className="home-grid">
             {homeTiles.map((tile) => (
               <a className="home-tile" href={tile.path} key={tile.path} aria-label={tile.alt}>
@@ -107,10 +104,15 @@ export function Contact({ onSubmitContact }) {
 
   return (
     <section className="contact-section section-bg">
-      <div className="page-width">
-        <div className="wave-crop">
-          <img src="/assets/golf-c3d8cb.png" alt="" />
+      <div className="page-width contact-layout">
+        <div className="contact-intro">
+          <span>Contact</span>
+          <h1>Een vraag of iets dat je wil delen?</h1>
+          <p>
+            Stuur gerust een bericht. Jorane leest je vraag persoonlijk en neemt zo snel mogelijk contact met je op.
+          </p>
         </div>
+
         <form className="contact-form" onSubmit={submitForm}>
           <label>
             Jouw naam *
@@ -140,6 +142,7 @@ export function Contact({ onSubmitContact }) {
               name="bericht"
               value={form.message}
               onChange={(event) => updateForm('message', event.target.value)}
+              placeholder="Waarmee kan ik je helpen?"
               required
             />
           </label>
@@ -165,8 +168,11 @@ export function Contact({ onSubmitContact }) {
           </label>
           {feedback && <p className={`contact-feedback ${status === 'error' ? 'error' : 'success'}`}>{feedback}</p>}
           <button className="submit-button" type="submit" disabled={!canSubmit}>
-            {status === 'sending' ? 'Verzenden...' : 'Verzenden'}
+            {status === 'sending' ? 'Verzenden...' : 'Bericht verzenden'}
           </button>
+          <p className="contact-privacy-note">
+            Je gegevens worden alleen gebruikt om je bericht te beantwoorden.
+          </p>
         </form>
       </div>
     </section>

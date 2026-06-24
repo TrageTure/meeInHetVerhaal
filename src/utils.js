@@ -48,6 +48,14 @@ export function getCategoryConfig(category) {
   }
 }
 
+export function getAudienceTone(value) {
+  const normalized = value?.toLowerCase() || ''
+  if (normalized.includes('leerkracht')) return 'leerkrachten'
+  if (normalized.includes('zorgverlener')) return 'zorgverleners'
+  if (normalized.includes('zorgfiguur')) return 'zorgfiguren'
+  return 'all'
+}
+
 export function normalizePath(path) {
   if (!path || path === '') return '/'
   if (path !== '/' && path.endsWith('/') && !path.startsWith('/blog/voor-')) {

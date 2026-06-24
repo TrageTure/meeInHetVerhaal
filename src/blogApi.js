@@ -3,19 +3,38 @@ import { defaultSiteContent } from './data'
 
 function toCategory(audience) {
   return {
+    audienceId: audience.id,
+    audienceSlug: audience.slug,
     category: audience.name,
     categoryPath: audience.category_path,
     image: audience.image_path,
     foregroundImage: audience.foreground_image_path,
     foregroundClass: audience.foreground_class,
+    accentColor: audience.accent_color,
   }
 }
 
-function toPost(row, audiencesById, linksByPostId, optionsById, groups) {
-  const audience = audiencesById.get(row.audience_id)
+function toPost(row, audiencesById, audienceLinksByPostId, linksByPostId, optionsById, groups) {
+  const primaryAudience = audiencesById.get(row.audience_id)
+  const linkedAudiences = (audienceLinksByPostId.get(row.id) || [])
+    .map((audienceId) => audiencesById.get(audienceId))
+    .filter(Boolean)
+  const postAudiences = linkedAudiences.length > 0
+    ? linkedAudiences
+    : primaryAudience
+      ? [primaryAudience]
+      : []
   const post = {
     id: row.id,
     audienceId: row.audience_id,
+    audiences: postAudiences.map((audience) => ({
+      id: audience.id,
+      slug: audience.slug,
+      name: audience.name,
+      categoryPath: audience.category_path,
+      accentColor: audience.accent_color,
+    })),
+    audienceNames: postAudiences.map((audience) => audience.name),
     title: row.title,
     intro: row.intro,
     content: row.content,
@@ -23,7 +42,7 @@ function toPost(row, audiencesById, linksByPostId, optionsById, groups) {
     path: `/blog/${row.slug}`,
     status: row.status,
     publishedAt: row.published_at,
-    ...(audience ? toCategory(audience) : {}),
+    ...(primaryAudience ? toCategory(primaryAudience) : {}),
   }
 
   groups.forEach((group) => {
@@ -89,6 +108,7 @@ export async function fetchBlogData() {
     optionsResult,
     postsResult,
     linksResult,
+    audienceLinksResult,
     siteContentResult,
   ] = await Promise.all([
     supabase.from('blog_audiences').select('*').order('sort_order'),
@@ -96,11 +116,14 @@ export async function fetchBlogData() {
     supabase.from('blog_filter_options').select('*').order('sort_order'),
     supabase.from('blog_posts').select('*').order('published_at', { ascending: false }).order('created_at', { ascending: false }),
     supabase.from('blog_post_filter_options').select('*'),
+    supabase.from('blog_post_audiences').select('*').order('sort_order'),
     supabase.from('site_page_content').select('page_key, title, body'),
   ])
 
   const error = audiencesResult.error || groupsResult.error || optionsResult.error || postsResult.error || linksResult.error
   if (error) throw error
+  const audienceLinksTableMissing = ['42P01', 'PGRST205'].includes(audienceLinksResult.error?.code)
+  if (audienceLinksResult.error && !audienceLinksTableMissing) throw audienceLinksResult.error
   const siteContentTableMissing = ['42P01', 'PGRST205'].includes(siteContentResult.error?.code)
   if (siteContentResult.error && !siteContentTableMissing) throw siteContentResult.error
 
@@ -108,6 +131,7 @@ export async function fetchBlogData() {
   const rawGroups = groupsResult.data || []
   const rawOptions = optionsResult.data || []
   const links = linksResult.data || []
+  const audienceLinks = audienceLinksResult.data || []
 
   const groups = rawGroups.map((group) => {
     const optionRecords = rawOptions
@@ -144,18 +168,35 @@ export async function fetchBlogData() {
     linksByPostId.set(link.post_id, [...current, link.filter_option_id])
   })
 
+  const audienceLinksByPostId = new Map()
+  audienceLinks.forEach((link) => {
+    const current = audienceLinksByPostId.get(link.post_id) || []
+    audienceLinksByPostId.set(link.post_id, [...current, link.audience_id])
+  })
+
   return {
     audiences,
     filterGroups: groups,
-    posts: (postsResult.data || []).map((post) => toPost(post, audiencesById, linksByPostId, optionsById, groups)),
+    posts: (postsResult.data || []).map((post) =>
+      toPost(post, audiencesById, audienceLinksByPostId, linksByPostId, optionsById, groups),
+    ),
+    audienceLinksTableMissing,
     siteContent: toSiteContent(siteContentResult.data),
     siteContentTableMissing,
   }
 }
 
 export async function saveBlogPost(article, originalPath, currentPosts, audiences, filterGroups) {
-  const audience = audiences.find((item) => item.name === article.category)
-  if (!audience) throw new Error('Geen doelgroep gevonden voor dit artikel.')
+  const selectedAudiences = (article.audiences || [])
+    .map((audienceName) => audiences.find((item) => item.name === audienceName))
+    .filter(Boolean)
+  if (selectedAudiences.length === 0) throw new Error('Kies minstens één doelgroep voor dit artikel.')
+  const primaryAudience = selectedAudiences.find((item) => item.name === article.category) || selectedAudiences[0]
+  const audienceTableCheck = await supabase.from('blog_post_audiences').select('post_id').limit(1)
+  if (audienceTableCheck.error?.code === 'PGRST205' || audienceTableCheck.error?.code === '42P01') {
+    throw new Error('Voer eerst de migratie voor meerdere blogdoelgroepen uit in Supabase.')
+  }
+  if (audienceTableCheck.error) throw audienceTableCheck.error
 
   let slug = article.slug || article.path?.replace('/blog/', '') || ''
   if (!slug) {
@@ -176,7 +217,7 @@ export async function saveBlogPost(article, originalPath, currentPosts, audience
 
   const existing = article.id || currentPosts.find((post) => post.path === originalPath || post.path === article.path)?.id
   const payload = {
-    audience_id: audience.id,
+    audience_id: primaryAudience.id,
     slug,
     title: article.title.trim(),
     intro: article.intro.trim(),
@@ -191,6 +232,21 @@ export async function saveBlogPost(article, originalPath, currentPosts, audience
 
   if (postResult.error) throw postResult.error
   const postId = postResult.data.id
+
+  const deleteAudienceLinksResult = await supabase.from('blog_post_audiences').delete().eq('post_id', postId)
+  if (deleteAudienceLinksResult.error?.code === 'PGRST205' || deleteAudienceLinksResult.error?.code === '42P01') {
+    throw new Error('Voer eerst de migratie voor meerdere blogdoelgroepen uit in Supabase.')
+  }
+  if (deleteAudienceLinksResult.error) throw deleteAudienceLinksResult.error
+
+  const insertAudienceLinksResult = await supabase.from('blog_post_audiences').insert(
+    selectedAudiences.map((audience, index) => ({
+      post_id: postId,
+      audience_id: audience.id,
+      sort_order: index + 1,
+    })),
+  )
+  if (insertAudienceLinksResult.error) throw insertAudienceLinksResult.error
 
   const selectedOptionIds = []
   filterGroups.forEach((group) => {

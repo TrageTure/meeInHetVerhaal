@@ -56,6 +56,7 @@ function App() {
   const [siteFilterGroups, setSiteFilterGroups] = useState(defaultFilterGroups)
   const [siteContent, setSiteContent] = useState(defaultSiteContent)
   const [siteContentTableMissing, setSiteContentTableMissing] = useState(false)
+  const [audienceLinksTableMissing, setAudienceLinksTableMissing] = useState(false)
   const [blogFilters, setBlogFilters] = useState(() => readStoredBlogFilters(defaultFilterGroups))
   const [lastBlogListPath, setLastBlogListPath] = useState(() => readStoredBlogListPath())
   const [session, setSession] = useState(null)
@@ -88,6 +89,7 @@ function App() {
       setSiteFilterGroups(blogData.filterGroups)
       setSiteContent(blogData.siteContent)
       setSiteContentTableMissing(blogData.siteContentTableMissing)
+      setAudienceLinksTableMissing(blogData.audienceLinksTableMissing)
       setBlogFilters((current) => {
         const currentHasFilters = Object.values(current).some((values) => values.length > 0)
         return sanitizeBlogFilters(blogData.filterGroups, currentHasFilters ? current : readStoredBlogFilters(blogData.filterGroups))
@@ -192,6 +194,7 @@ function App() {
               onSaveFilterGroups={saveFilterGroups}
               siteContent={siteContent}
               siteContentTableMissing={siteContentTableMissing}
+              audienceLinksTableMissing={audienceLinksTableMissing}
               onSaveSiteContent={saveSiteContent}
             />
           </React.Suspense>

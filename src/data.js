@@ -6,10 +6,10 @@ export const navItems = [
 ]
 
 export const categories = [
-  { label: 'Alle berichten', path: '/blog/' },
-  { label: 'Voor zorgfiguren', path: '/blog/voor-zorgfiguren/' },
-  { label: 'Voor leerkrachten', path: '/blog/voor-leerkrachten/' },
-  { label: 'Voor zorgverleners', path: '/blog/voor-zorgverleners/' },
+  { label: 'Alle berichten', path: '/blog/', tone: 'all' },
+  { label: 'Voor zorgfiguren', path: '/blog/voor-zorgfiguren/', tone: 'zorgfiguren' },
+  { label: 'Voor leerkrachten', path: '/blog/voor-leerkrachten/', tone: 'leerkrachten' },
+  { label: 'Voor zorgverleners', path: '/blog/voor-zorgverleners/', tone: 'zorgverleners' },
 ]
 
 export const posts = [
@@ -177,6 +177,7 @@ export const defaultSiteContent = {
 export const defaultArticle = {
   title: '',
   category: 'Voor zorgfiguren',
+  audiences: ['Voor zorgfiguren'],
   intro: '',
   content: '',
   age: [],
