@@ -157,6 +157,23 @@ export const homeTiles = [
   { path: '/contact', image: '/assets/contact-card.png', alt: 'Contact' },
 ]
 
+export const defaultSiteContent = {
+  home: {
+    pageKey: 'home',
+    title: 'Warme taal voor moeilijke momenten',
+    body: 'Verhalen, handvatten en zachte oefeningen voor kinderen, zorgfiguren, leerkrachten en zorgverleners wanneer ziekte, afscheid of rouw dichtbij komt.',
+  },
+  about: {
+    pageKey: 'about',
+    title: 'Ruimte maken voor wat moeilijk te zeggen is',
+    body: [
+      'Met Mee in het verhaal wil Jorane kinderen en de mensen rondom hen helpen om taal, rust en houvast te vinden wanneer ziekte, afscheid of rouw dichtbij komt.',
+      'Moeilijke gebeurtenissen komen vaak met grote vragen. Wat zeg je tegen een kind? Hoe blijf je eerlijk zonder te overspoelen? En hoe geef je ruimte aan verdriet, verwarring of stilte?',
+      'Deze plek verzamelt zachte woorden, concrete handvatten en kleine oefeningen voor zorgfiguren, leerkrachten en zorgverleners die kinderen nabij willen blijven op kwetsbare momenten.',
+    ].join('\n\n'),
+  },
+}
+
 export const defaultArticle = {
   title: '',
   category: 'Voor zorgfiguren',

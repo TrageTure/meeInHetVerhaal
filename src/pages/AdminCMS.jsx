@@ -27,6 +27,9 @@ export function AdminCMS({
   onLogout,
   onSavePost,
   onSaveFilterGroups,
+  siteContent,
+  siteContentTableMissing,
+  onSaveSiteContent,
 }) {
   const [article, setArticle] = useState(defaultArticle)
   const [selectedPath, setSelectedPath] = useState('')
@@ -34,6 +37,10 @@ export function AdminCMS({
   const [newFilterValues, setNewFilterValues] = useState(getEmptyFilterState(filterGroups))
   const [activeAdminView, setActiveAdminView] = useState('new')
   const [newFilterGroup, setNewFilterGroup] = useState({ label: '', option: '' })
+  const [draftSiteContent, setDraftSiteContent] = useState(() => ({
+    home: { ...siteContent.home },
+    about: { ...siteContent.about },
+  }))
   const [loginForm, setLoginForm] = useState({ email: '', password: '' })
   const [adminMessage, setAdminMessage] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -50,15 +57,18 @@ export function AdminCMS({
   }
   const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
   const canSave = article.title.trim() && article.intro.trim() && (isEditing || article.content.trim()) && hasEveryFilterGroup
+  const canSaveSiteContent = Object.values(draftSiteContent).every((page) => page.title.trim() && page.body.trim())
   const adminViewTitle = {
     new: 'Nieuwe blog aanmaken',
     manage: 'Bestaande blogs beheren',
     filters: 'Filters beheren',
+    pages: 'Pagina-inhoud beheren',
   }[activeAdminView]
   const adminViewDescription = {
     new: 'Schrijf een nieuw artikel in een rustige editor met live preview.',
     manage: 'Kies een bestaande blog, pas hem aan en bekijk meteen hoe de kaart eruitziet.',
     filters: 'Voeg filteropties toe of hernoem bestaande filters zonder de artikel-editor te openen.',
+    pages: 'Pas de titel en introductietekst van Home en Over Jorane aan.',
   }[activeAdminView]
 
   React.useEffect(() => {
@@ -72,6 +82,13 @@ export function AdminCMS({
       return next
     })
   }, [filterGroups])
+
+  React.useEffect(() => {
+    setDraftSiteContent({
+      home: { ...siteContent.home },
+      about: { ...siteContent.about },
+    })
+  }, [siteContent])
 
   function startNewArticle() {
     setSelectedPath('')
@@ -221,6 +238,31 @@ export function AdminCMS({
     }
   }
 
+  function updatePageContent(pageKey, field, value) {
+    setDraftSiteContent((current) => ({
+      ...current,
+      [pageKey]: {
+        ...current[pageKey],
+        [field]: value,
+      },
+    }))
+  }
+
+  async function savePages(event) {
+    event.preventDefault()
+    if (!canSaveSiteContent) return
+    setAdminMessage('')
+    setIsSaving(true)
+    try {
+      await onSaveSiteContent(draftSiteContent)
+      setAdminMessage('Pagina-inhoud opgeslagen.')
+    } catch (error) {
+      setAdminMessage(error.message || 'Pagina-inhoud opslaan is niet gelukt.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (dataStatus === 'missing-config') {
     return (
       <section className="admin-section section-bg">
@@ -260,7 +302,7 @@ export function AdminCMS({
           <div className="admin-heading">
             <span>Beheer</span>
             <h1>Beheer laden</h1>
-            <p>We halen je blogs en filters op uit Supabase.</p>
+            <p>We halen je blogs, filters en pagina-inhoud op uit Supabase.</p>
           </div>
           <div className="admin-layout admin-overlay">
             <div className="admin-form">
@@ -301,7 +343,7 @@ export function AdminCMS({
           <div className="admin-heading">
             <span>Beheer</span>
             <h1>Inloggen</h1>
-            <p>Log in om blogs en filters te beheren.</p>
+            <p>Log in om blogs, filters en pagina-inhoud te beheren.</p>
           </div>
           <form className="admin-panel admin-login-panel" onSubmit={submitLogin}>
             <label className="admin-field">
@@ -343,6 +385,9 @@ export function AdminCMS({
           </button>
           <button className={activeAdminView === 'filters' ? 'active' : ''} type="button" onClick={() => setActiveAdminView('filters')}>
             Filters
+          </button>
+          <button className={activeAdminView === 'pages' ? 'active' : ''} type="button" onClick={() => setActiveAdminView('pages')}>
+            Pagina's
           </button>
         </div>
         {adminMessage && <p className="admin-message">{adminMessage}</p>}
@@ -562,6 +607,102 @@ export function AdminCMS({
               ))}
             </aside>
           </div>
+        )}
+
+        {activeAdminView === 'pages' && (
+          <form className="admin-overlay page-content-overlay" onSubmit={savePages}>
+            <div className="page-content-editors">
+              {siteContentTableMissing && (
+                <p className="admin-message">
+                  De pagina-inhoud gebruikt voorlopig de standaardtekst. Voer de nieuwe Supabase-migratie uit om wijzigingen te kunnen bewaren.
+                </p>
+              )}
+              <section className="admin-panel">
+                <div className="panel-title">
+                  <span>1</span>
+                  <div>
+                    <h2>Home</h2>
+                    <p>De grote titel en introductietekst bovenaan de startpagina.</p>
+                  </div>
+                </div>
+                <label className="admin-field">
+                  Titel
+                  <input
+                    value={draftSiteContent.home.title}
+                    onChange={(event) => updatePageContent('home', 'title', event.target.value)}
+                  />
+                </label>
+                <label className="admin-field">
+                  Introductietekst
+                  <textarea
+                    value={draftSiteContent.home.body}
+                    onChange={(event) => updatePageContent('home', 'body', event.target.value)}
+                    rows="5"
+                  />
+                </label>
+              </section>
+
+              <section className="admin-panel">
+                <div className="panel-title">
+                  <span>2</span>
+                  <div>
+                    <h2>Over Jorane</h2>
+                    <p>De titel en tekst naast de foto. Gebruik een lege regel voor een nieuwe alinea.</p>
+                  </div>
+                </div>
+                <label className="admin-field">
+                  Titel
+                  <input
+                    value={draftSiteContent.about.title}
+                    onChange={(event) => updatePageContent('about', 'title', event.target.value)}
+                  />
+                </label>
+                <label className="admin-field">
+                  Tekst
+                  <textarea
+                    className="page-content-body-input"
+                    value={draftSiteContent.about.body}
+                    onChange={(event) => updatePageContent('about', 'body', event.target.value)}
+                    rows="10"
+                  />
+                </label>
+              </section>
+
+              <div className="admin-actions">
+                <button
+                  type="button"
+                  onClick={() => setDraftSiteContent({
+                    home: { ...siteContent.home },
+                    about: { ...siteContent.about },
+                  })}
+                >
+                  Wijzigingen herstellen
+                </button>
+                <button className="publish-button" type="submit" disabled={!canSaveSiteContent || isSaving || siteContentTableMissing}>
+                  {isSaving ? 'Opslaan...' : 'Pagina-inhoud opslaan'}
+                </button>
+              </div>
+            </div>
+
+            <aside className="admin-panel page-content-preview" aria-label="Live voorbeeld pagina-inhoud">
+              <div className="preview-label">Live voorbeeld</div>
+              <div className="page-preview-block">
+                <span>Home</span>
+                <h2>{draftSiteContent.home.title || 'Titel van de homepagina'}</h2>
+                <p>{draftSiteContent.home.body || 'De introductietekst verschijnt hier.'}</p>
+              </div>
+              <div className="page-preview-block">
+                <span>Over Jorane</span>
+                <h2>{draftSiteContent.about.title || 'Titel van Over Jorane'}</h2>
+                {draftSiteContent.about.body
+                  .split(/\n+/)
+                  .map((paragraph) => paragraph.trim())
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              </div>
+            </aside>
+          </form>
         )}
             </div>
     </section>

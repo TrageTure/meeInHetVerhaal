@@ -904,6 +904,7 @@ a {
 
 .admin-view-switch {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 30px 0 28px;
   padding: 6px;
@@ -1244,6 +1245,58 @@ a {
   grid-template-columns: minmax(0, 1fr) 360px;
   gap: 36px;
   align-items: start;
+}
+
+.page-content-overlay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 36px;
+  align-items: start;
+}
+
+.page-content-editors {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.page-content-body-input {
+  min-height: 240px;
+}
+
+.page-content-preview {
+  position: sticky;
+  top: 24px;
+}
+
+.page-preview-block {
+  padding: 4px 0 22px;
+}
+
+.page-preview-block + .page-preview-block {
+  padding-top: 22px;
+  border-top: 1px solid rgba(60, 60, 60, 0.08);
+}
+
+.page-preview-block > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #8fb4a0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.page-preview-block h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.page-preview-block p {
+  margin: 0 0 10px;
+  color: #3c3c3c;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .filter-admin-panel,
@@ -2042,12 +2095,14 @@ a {
   }
 
   .admin-layout,
-  .filters-overlay {
+  .filters-overlay,
+  .page-content-overlay {
     display: block;
   }
 
   .admin-preview,
-  .filter-summary-panel {
+  .filter-summary-panel,
+  .page-content-preview {
     position: static;
     margin-top: 24px;
   }
@@ -2358,11 +2413,20 @@ a {
     display: block;
   }
 
+  .page-content-overlay {
+    display: block;
+  }
+
   .new-filter-group-grid {
     grid-template-columns: 1fr;
   }
 
   .filter-summary-panel {
+    position: static;
+    margin-top: 22px;
+  }
+
+  .page-content-preview {
     position: static;
     margin-top: 22px;
   }

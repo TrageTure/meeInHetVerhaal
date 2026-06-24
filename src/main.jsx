@@ -6,11 +6,12 @@ import {
   isConfigured,
   saveBlogPost,
   saveFilters as saveSupabaseFilters,
+  saveSiteContent as saveSupabaseSiteContent,
   signIn,
   signOut,
 } from './blogApi'
 import { sendContactEmail } from './contactApi'
-import { defaultFilterGroups, posts } from './data'
+import { defaultFilterGroups, defaultSiteContent, posts } from './data'
 import { Header, Footer } from './components/Layout'
 import { Home, About, Contact, Privacy } from './pages/StaticPages'
 import { BlogList, BlogPost } from './pages/BlogPages'
@@ -50,6 +51,8 @@ function App() {
   const [allPosts, setAllPosts] = useState(posts)
   const [audiences, setAudiences] = useState([])
   const [siteFilterGroups, setSiteFilterGroups] = useState(defaultFilterGroups)
+  const [siteContent, setSiteContent] = useState(defaultSiteContent)
+  const [siteContentTableMissing, setSiteContentTableMissing] = useState(false)
   const [blogFilters, setBlogFilters] = useState(() => readStoredBlogFilters(defaultFilterGroups))
   const [lastBlogListPath, setLastBlogListPath] = useState(() => readStoredBlogListPath())
   const [session, setSession] = useState(null)
@@ -80,6 +83,8 @@ function App() {
       setAudiences(blogData.audiences)
       setAllPosts(blogData.posts)
       setSiteFilterGroups(blogData.filterGroups)
+      setSiteContent(blogData.siteContent)
+      setSiteContentTableMissing(blogData.siteContentTableMissing)
       setBlogFilters((current) => {
         const currentHasFilters = Object.values(current).some((values) => values.length > 0)
         return sanitizeBlogFilters(blogData.filterGroups, currentHasFilters ? current : readStoredBlogFilters(blogData.filterGroups))
@@ -101,6 +106,11 @@ function App() {
 
   async function saveFilterGroups(groups) {
     await saveSupabaseFilters(groups)
+    await loadBlogData()
+  }
+
+  async function saveSiteContent(content) {
+    await saveSupabaseSiteContent(content)
     await loadBlogData()
   }
 
@@ -146,7 +156,7 @@ function App() {
     <>
       <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       <main>
-        {path === '/' && <Home />}
+        {path === '/' && <Home content={siteContent.home} />}
         {isBlogListPath(path) && (
           <BlogList
             path={window.location.pathname}
@@ -176,13 +186,16 @@ function App() {
             }}
             onSavePost={savePost}
             onSaveFilterGroups={saveFilterGroups}
+            siteContent={siteContent}
+            siteContentTableMissing={siteContentTableMissing}
+            onSaveSiteContent={saveSiteContent}
           />
         )}
-        {path === '/over-jorane' && <About />}
+        {path === '/over-jorane' && <About content={siteContent.about} />}
         {path === '/contact' && <Contact onSubmitContact={sendContactEmail} />}
         {path === '/privacy' && <Privacy />}
         {allPosts.some((post) => post.path === path) && <BlogPost post={allPosts.find((post) => post.path === path)} filterGroups={siteFilterGroups} backPath={lastBlogListPath} />}
-        {!isKnownPath(path, allPosts) && <Home />}
+        {!isKnownPath(path, allPosts) && <Home content={siteContent.home} />}
       </main>
       <Footer />
     </>

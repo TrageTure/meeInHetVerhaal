@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { homeTiles } from '../data'
 
-export function Home() {
+export function Home({ content }) {
   return (
     <>
       <section className="home-hero section-bg">
@@ -11,11 +11,8 @@ export function Home() {
           </a>
           <div className="home-hero-copy">
             <span>Mee in het verhaal</span>
-            <h1>Warme taal voor moeilijke momenten</h1>
-            <p>
-              Verhalen, handvatten en zachte oefeningen voor kinderen, zorgfiguren, leerkrachten en zorgverleners
-              wanneer ziekte, afscheid of rouw dichtbij komt.
-            </p>
+            <h1>{content.title}</h1>
+            <p>{content.body}</p>
             <div className="home-actions">
               <a className="primary-home-link" href="/blog/">Naar de blog</a>
               <a className="secondary-home-link" href="/over-jorane">Over Jorane</a>
@@ -41,7 +38,12 @@ export function Home() {
   )
 }
 
-export function About() {
+export function About({ content }) {
+  const paragraphs = content.body
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+
   return (
     <section className="about-section section-bg">
       <div className="page-width about-simple">
@@ -50,19 +52,8 @@ export function About() {
         </div>
         <article className="about-copy">
           <span>Over Jorane</span>
-          <h1>Ruimte maken voor wat moeilijk te zeggen is</h1>
-          <p>
-            Met Mee in het verhaal wil Jorane kinderen en de mensen rondom hen helpen om taal, rust en houvast te vinden
-            wanneer ziekte, afscheid of rouw dichtbij komt.
-          </p>
-          <p>
-            Moeilijke gebeurtenissen komen vaak met grote vragen. Wat zeg je tegen een kind? Hoe blijf je eerlijk zonder te
-            overspoelen? En hoe geef je ruimte aan verdriet, verwarring of stilte?
-          </p>
-          <p>
-            Deze plek verzamelt zachte woorden, concrete handvatten en kleine oefeningen voor zorgfiguren, leerkrachten en
-            zorgverleners die kinderen nabij willen blijven op kwetsbare momenten.
-          </p>
+          <h1>{content.title}</h1>
+          {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           <a className="primary-home-link" href="/blog/">Naar de blog</a>
         </article>
       </div>

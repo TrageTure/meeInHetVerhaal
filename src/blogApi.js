@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { defaultSiteContent } from './data'
 
 function toCategory(audience) {
   return {
@@ -39,6 +40,22 @@ function toPost(row, audiencesById, linksByPostId, optionsById, groups) {
   return post
 }
 
+function toSiteContent(rows = []) {
+  return Object.fromEntries(
+    Object.entries(defaultSiteContent).map(([key, fallback]) => {
+      const row = rows.find((item) => item.page_key === fallback.pageKey)
+      return [
+        key,
+        {
+          ...fallback,
+          title: row?.title || fallback.title,
+          body: row?.body || fallback.body,
+        },
+      ]
+    }),
+  )
+}
+
 export function isConfigured() {
   return isSupabaseConfigured
 }
@@ -72,16 +89,20 @@ export async function fetchBlogData() {
     optionsResult,
     postsResult,
     linksResult,
+    siteContentResult,
   ] = await Promise.all([
     supabase.from('blog_audiences').select('*').order('sort_order'),
     supabase.from('blog_filter_groups').select('*').order('sort_order'),
     supabase.from('blog_filter_options').select('*').order('sort_order'),
     supabase.from('blog_posts').select('*').order('published_at', { ascending: false }).order('created_at', { ascending: false }),
     supabase.from('blog_post_filter_options').select('*'),
+    supabase.from('site_page_content').select('page_key, title, body'),
   ])
 
   const error = audiencesResult.error || groupsResult.error || optionsResult.error || postsResult.error || linksResult.error
   if (error) throw error
+  const siteContentTableMissing = ['42P01', 'PGRST205'].includes(siteContentResult.error?.code)
+  if (siteContentResult.error && !siteContentTableMissing) throw siteContentResult.error
 
   const audiences = audiencesResult.data || []
   const rawGroups = groupsResult.data || []
@@ -127,6 +148,8 @@ export async function fetchBlogData() {
     audiences,
     filterGroups: groups,
     posts: (postsResult.data || []).map((post) => toPost(post, audiencesById, linksByPostId, optionsById, groups)),
+    siteContent: toSiteContent(siteContentResult.data),
+    siteContentTableMissing,
   }
 }
 
@@ -241,4 +264,25 @@ export async function saveFilters(groups) {
   }
 
   return savedGroups
+}
+
+export async function saveSiteContent(siteContent) {
+  if (!supabase) {
+    throw new Error('Supabase is nog niet geconfigureerd.')
+  }
+
+  const rows = Object.values(siteContent).map((page) => ({
+    page_key: page.pageKey,
+    title: page.title.trim(),
+    body: page.body.trim(),
+  }))
+
+  const { error } = await supabase
+    .from('site_page_content')
+    .upsert(rows, { onConflict: 'page_key' })
+
+  if (error?.code === 'PGRST205' || error?.code === '42P01') {
+    throw new Error('Voer eerst de nieuwe site_page_content-migratie uit in Supabase.')
+  }
+  if (error) throw error
 }
