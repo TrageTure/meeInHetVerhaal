@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import { categories, defaultArticle } from '../data'
+import { AudienceVisual } from '../components/AudienceVisual'
 import { RichTextEditor } from '../components/RichTextEditor'
 import { isRichTextEmpty } from '../richText'
 import { createFilterKey, getAudienceTone, getCategoryConfig, getEmptyFilterState } from '../utils'
@@ -29,7 +31,10 @@ export function AdminCMS({
   onLogin,
   onLogout,
   onSavePost,
+  onDeletePost,
   onSaveFilterGroups,
+  onDeleteFilterOption,
+  onDeleteFilterGroup,
   siteContent,
   siteContentTableMissing,
   audienceLinksTableMissing,
@@ -59,6 +64,13 @@ export function AdminCMS({
     title: article.title || 'Titel van je blogartikel',
     intro: article.intro || 'Schrijf hier een korte beschrijving die gezinnen, leerkrachten of zorgverleners meteen helpt begrijpen waar dit artikel over gaat.',
   }
+  const previewAudiences = (article.audiences || []).map((audienceName) => {
+    const audience = audiences.find((item) => item.name === audienceName)
+    return {
+      name: audienceName,
+      imagePath: audience?.image_path || getCategoryConfig(audienceName).image,
+    }
+  })
   const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
   const hasAudience = (article.audiences || []).length > 0
   const hasArticleContent = !isRichTextEmpty(article.content)
@@ -180,6 +192,23 @@ export function AdminCMS({
     }
   }
 
+  async function removeArticle(post) {
+    const confirmed = window.confirm(`Wil je "${post.title}" definitief verwijderen?`)
+    if (!confirmed) return
+    setAdminMessage('')
+    setIsSaving(true)
+    try {
+      await onDeletePost(post.id)
+      setSelectedPath('')
+      setArticle(defaultArticle)
+      setAdminMessage('Blog verwijderd.')
+    } catch (error) {
+      setAdminMessage(error.message || 'De blog kon niet verwijderd worden.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   function updateFilterOption(groupKey, optionIndex, value) {
     setDraftFilterGroups((current) =>
       current.map((group) =>
@@ -228,6 +257,67 @@ export function AdminCMS({
       ])
     setNewFilterValues((current) => ({ ...current, [key]: '' }))
     setNewFilterGroup({ label: '', option: '' })
+  }
+
+  async function removeFilterOption(group, optionIndex) {
+    const option = group.options[optionIndex]
+    const optionRecord = group.optionRecords?.[optionIndex]
+    const confirmed = window.confirm(`Wil je de filteroptie "${option}" verwijderen?`)
+    if (!confirmed) return
+
+    if (optionRecord?.id) {
+      setAdminMessage('')
+      setIsSaving(true)
+      try {
+        await onDeleteFilterOption(optionRecord.id)
+        setAdminMessage('Filteroptie verwijderd.')
+      } catch (error) {
+        setAdminMessage(error.message || 'De filteroptie kon niet verwijderd worden.')
+      } finally {
+        setIsSaving(false)
+      }
+      return
+    }
+
+    setDraftFilterGroups((current) =>
+      current.map((currentGroup) =>
+        currentGroup.key === group.key
+          ? {
+              ...currentGroup,
+              options: currentGroup.options.filter((_, index) => index !== optionIndex),
+              optionRecords: (currentGroup.optionRecords || []).filter((_, index) => index !== optionIndex),
+            }
+          : currentGroup,
+      ),
+    )
+  }
+
+  async function removeFilterGroup(group) {
+    const confirmed = window.confirm(
+      `Wil je de filtercategorie "${group.label}" en alle opties daarin verwijderen?`,
+    )
+    if (!confirmed) return
+
+    if (group.id) {
+      setAdminMessage('')
+      setIsSaving(true)
+      try {
+        await onDeleteFilterGroup(group.id)
+        setAdminMessage('Filtercategorie verwijderd.')
+      } catch (error) {
+        setAdminMessage(error.message || 'De filtercategorie kon niet verwijderd worden.')
+      } finally {
+        setIsSaving(false)
+      }
+      return
+    }
+
+    setDraftFilterGroups((current) => current.filter((item) => item.key !== group.key))
+    setNewFilterValues((current) => {
+      const next = { ...current }
+      delete next[group.key]
+      return next
+    })
   }
 
   async function saveFilters() {
@@ -434,15 +524,26 @@ export function AdminCMS({
                   </div>
                   <div className="article-picker" aria-label="Bestaande blogartikels">
                     {editablePosts.map((post) => (
-                      <button
-                        className={(post.originalPath || post.path) === selectedPath ? 'active' : ''}
-                        key={post.path}
-                        type="button"
-                        onClick={() => selectArticle(post.path)}
-                      >
-                        <span>{post.audienceNames?.join(' · ') || post.category}</span>
-                        {post.title}
-                      </button>
+                      <div className="article-picker-item" key={post.path}>
+                        <button
+                          className={`article-select-button ${(post.originalPath || post.path) === selectedPath ? 'active' : ''}`}
+                          type="button"
+                          onClick={() => selectArticle(post.path)}
+                        >
+                          <span>{post.audienceNames?.join(' · ') || post.category}</span>
+                          {post.title}
+                        </button>
+                        <button
+                          className="icon-delete-button"
+                          type="button"
+                          onClick={() => removeArticle(post)}
+                          aria-label={`Verwijder ${post.title}`}
+                          title="Blog verwijderen"
+                          disabled={isSaving}
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -533,9 +634,7 @@ export function AdminCMS({
               <div className="preview-sticky">
                 <div className="preview-label">Live preview</div>
                 <a className="post-card preview-card" href="/beheer" onClick={(event) => event.preventDefault()}>
-                  <span className="post-thumb">
-                    <img className="post-thumb-bg" src={previewPost.image} alt="" />
-                  </span>
+                  <AudienceVisual className="post-thumb" audiences={previewAudiences} fallbackImage={previewPost.image} />
                   <span className="post-summary">
                     <span className="post-category-labels">
                       {(article.audiences || []).map((audience) => (
@@ -602,15 +701,37 @@ export function AdminCMS({
               <div className="filter-manager">
                 {draftFilterGroups.map((group) => (
                   <div className="filter-editor-group" key={group.key}>
-                    <label className="filter-name-row">
-                      Filtercategorie
-                      <input value={group.label} onChange={(event) => updateFilterGroupLabel(group.key, event.target.value)} />
-                    </label>
+                    <div className="filter-group-heading">
+                      <label className="filter-name-row">
+                        Filtercategorie
+                        <input value={group.label} onChange={(event) => updateFilterGroupLabel(group.key, event.target.value)} />
+                      </label>
+                      <button
+                        className="icon-delete-button"
+                        type="button"
+                        onClick={() => removeFilterGroup(group)}
+                        aria-label={`Verwijder filtercategorie ${group.label}`}
+                        title="Filtercategorie verwijderen"
+                        disabled={isSaving}
+                      >
+                        <Trash2 />
+                      </button>
+                    </div>
                     {group.options.map((option, index) => (
-                      <label className="filter-edit-row" key={`${group.key}-${index}`}>
+                      <div className="filter-edit-row" key={`${group.key}-${index}`}>
                         <span>Optie {index + 1}</span>
                         <input value={option} onChange={(event) => updateFilterOption(group.key, index, event.target.value)} />
-                      </label>
+                        <button
+                          className="icon-delete-button"
+                          type="button"
+                          onClick={() => removeFilterOption(group, index)}
+                          aria-label={`Verwijder filteroptie ${option}`}
+                          title="Filteroptie verwijderen"
+                          disabled={isSaving}
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
                     ))}
                     <div className="add-filter-row">
                       <input

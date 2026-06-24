@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { homeTiles } from '../data'
 
-export function Home({ content }) {
+export function Home({ content, isLoading = false }) {
   return (
     <>
       <section className="home-hero section-bg">
@@ -9,10 +9,16 @@ export function Home({ content }) {
           <a className="home-portrait" href="/over-jorane" aria-label="Lees meer over Jorane">
             <img src="/assets/jorane-janssens.png" alt="" />
           </a>
-          <div className="home-hero-copy">
+          <div className="home-hero-copy" aria-busy={isLoading}>
             <span>Mee in het verhaal</span>
-            <h1>{content.title}</h1>
-            <p>{content.body}</p>
+            {isLoading ? (
+              <PageTextSkeleton variant="home" />
+            ) : (
+              <>
+                <h1>{content.title}</h1>
+                <p>{content.body}</p>
+              </>
+            )}
             <div className="home-actions">
               <a className="primary-home-link" href="/blog/">Naar de blog</a>
               <a className="secondary-home-link" href="/over-jorane">Over Jorane</a>
@@ -35,7 +41,7 @@ export function Home({ content }) {
   )
 }
 
-export function About({ content }) {
+export function About({ content, isLoading = false }) {
   const paragraphs = content.body
     .split(/\n+/)
     .map((paragraph) => paragraph.trim())
@@ -47,14 +53,33 @@ export function About({ content }) {
         <div className="about-portrait">
           <img src="/assets/jorane-janssens.png" alt="" />
         </div>
-        <article className="about-copy">
+        <article className="about-copy" aria-busy={isLoading}>
           <span>Over Jorane</span>
-          <h1>{content.title}</h1>
-          {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+          {isLoading ? (
+            <PageTextSkeleton variant="about" />
+          ) : (
+            <>
+              <h1>{content.title}</h1>
+              {paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            </>
+          )}
           <a className="primary-home-link" href="/blog/">Naar de blog</a>
         </article>
       </div>
     </section>
+  )
+}
+
+function PageTextSkeleton({ variant }) {
+  return (
+    <div className={`page-text-skeleton page-text-skeleton-${variant}`} aria-hidden="true">
+      <span className="page-skeleton-title" />
+      <div className="page-skeleton-body">
+        <span />
+        <span />
+        <span />
+      </div>
+    </div>
   )
 }
 

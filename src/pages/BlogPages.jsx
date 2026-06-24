@@ -1,11 +1,15 @@
 import React, { useState } from 'react'
 import { categories } from '../data'
+import { AudienceVisual } from '../components/AudienceVisual'
 import { isRichTextEmpty, sanitizeRichText } from '../richText'
 import { getAudienceTone, getEmptyFilterState } from '../utils'
 
-export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFilters, isLoading }) {
+export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFilters, isLoading, onOpenPost }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const activeCategory = path.endsWith('/voor-zorgfiguren/') ? 'Voor zorgfiguren' : path.endsWith('/voor-leerkrachten/') ? 'Voor leerkrachten' : path.endsWith('/voor-zorgverleners/') ? 'Voor zorgverleners' : 'Alle berichten'
+  const [categoryScroll, setCategoryScroll] = useState({ canScrollLeft: false, canScrollRight: false })
+  const categoryPillsRef = React.useRef(null)
+  const categoryPath = path.replace(/\/+$/, '')
+  const activeCategory = categoryPath.endsWith('/voor-zorgfiguren') ? 'Voor zorgfiguren' : categoryPath.endsWith('/voor-leerkrachten') ? 'Voor leerkrachten' : categoryPath.endsWith('/voor-zorgverleners') ? 'Voor zorgverleners' : 'Alle berichten'
   const categoryPosts = activeCategory === 'Alle berichten'
     ? blogPosts
     : blogPosts.filter((post) => (post.audienceNames || [post.category]).includes(activeCategory))
@@ -24,6 +28,43 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
       return next
     })
   }, [filterGroups])
+
+  React.useEffect(() => {
+    const scroller = categoryPillsRef.current
+    if (!scroller) return undefined
+
+    function updateCategoryScroll() {
+      const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth
+      setCategoryScroll({
+        canScrollLeft: scroller.scrollLeft > 2,
+        canScrollRight: maxScrollLeft - scroller.scrollLeft > 2,
+      })
+    }
+
+    updateCategoryScroll()
+    scroller.addEventListener('scroll', updateCategoryScroll, { passive: true })
+    const resizeObserver = new ResizeObserver(updateCategoryScroll)
+    resizeObserver.observe(scroller)
+
+    return () => {
+      scroller.removeEventListener('scroll', updateCategoryScroll)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  function scrollCategories(direction) {
+    categoryPillsRef.current?.scrollBy({
+      left: direction * Math.min(categoryPillsRef.current.clientWidth * 0.7, 280),
+      behavior: 'smooth',
+    })
+  }
+
+  function selectCategory(event, categoryPath) {
+    event.preventDefault()
+    if (window.location.pathname === categoryPath) return
+    window.history.pushState({}, '', categoryPath)
+    window.dispatchEvent(new Event('popstate'))
+  }
 
   function toggleFilter(groupKey, value) {
     setFilters((current) => {
@@ -44,17 +85,34 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
     <section className="blog-section section-bg">
       <div className="page-width blog-layout blog-layout-cards">
         <div className="blog-toolbar">
-          <nav className="category-pills" aria-label="Blogcategorieën">
-            {categories.map((category) => (
-              <a
-                className={`audience-${category.tone} ${category.label === activeCategory ? 'selected' : ''}`}
-                href={category.path}
-                key={category.path}
-              >
-                {category.label}
-              </a>
-            ))}
-          </nav>
+          <div
+            className={`category-scroll ${categoryScroll.canScrollLeft ? 'has-left' : ''} ${categoryScroll.canScrollRight ? 'has-right' : ''}`}
+          >
+            <button
+              className="category-scroll-arrow category-scroll-left"
+              type="button"
+              aria-label="Vorige doelgroepen"
+              onClick={() => scrollCategories(-1)}
+            />
+            <nav className="category-pills" aria-label="Blogcategorieën" ref={categoryPillsRef}>
+              {categories.map((category) => (
+                <a
+                  className={`audience-${category.tone} ${category.label === activeCategory ? 'selected' : ''}`}
+                  href={category.path}
+                  key={category.path}
+                  onClick={(event) => selectCategory(event, category.path)}
+                >
+                  {category.label}
+                </a>
+              ))}
+            </nav>
+            <button
+              className="category-scroll-arrow category-scroll-right"
+              type="button"
+              aria-label="Volgende doelgroepen"
+              onClick={() => scrollCategories(1)}
+            />
+          </div>
           <div className="filter-popover-wrap">
             <button
               className={`filter-toggle ${filtersOpen ? 'is-open' : ''}`}
@@ -63,8 +121,10 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
               aria-expanded={filtersOpen}
             >
               Filters
-              {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
-              <i className="filter-chevron" aria-hidden="true" />
+              <span className="filter-toggle-actions">
+                {activeFilterCount > 0 && <span className="filter-count">{activeFilterCount}</span>}
+                <i className="filter-chevron" aria-hidden="true" />
+              </span>
             </button>
             {filtersOpen && (
               <FilterControls filterGroups={filterGroups} filters={filters} toggleFilter={toggleFilter} clearFilters={clearFilters} hasActiveFilters={hasActiveFilters} />
@@ -86,10 +146,8 @@ export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFil
             </article>
           ))}
           {!isLoading && visiblePosts.map((post) => (
-            <a className="post-card" href={post.path} key={post.path}>
-              <span className="post-thumb">
-                <img className="post-thumb-bg" src={post.image} alt="" />
-              </span>
+            <a className="post-card" href={post.path} key={post.path} onClick={onOpenPost}>
+              <AudienceVisual className="post-thumb" audiences={post.audiences} fallbackImage={post.image} />
               <span className="post-summary">
                 <span className="post-title">{post.title}</span>
                 <span className="post-description">{post.intro}</span>
@@ -146,9 +204,7 @@ export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
           <span aria-hidden="true">‹</span> Terug naar overzicht
         </a>
         <div className="detail-hero">
-          <div className="detail-image">
-            <img className="post-thumb-bg" src={post.image} alt="" />
-          </div>
+          <AudienceVisual className="detail-image" audiences={post.audiences} fallbackImage={post.image} />
           <div className="detail-heading">
             <div className="post-categories">
               {(post.audiences || [{ name: post.category, categoryPath: post.categoryPath }]).map((audience) => (

@@ -10,6 +10,7 @@ import {
   ListOrdered,
   Quote,
   Redo2,
+  Underline,
   Unlink,
   Undo2,
   X,
@@ -31,7 +32,6 @@ export function RichTextEditor({ value, onChange }) {
         codeBlock: false,
         horizontalRule: false,
         strike: false,
-        underline: false,
         heading: {
           levels: [2, 3],
         },
@@ -102,6 +102,7 @@ export function RichTextEditor({ value, onChange }) {
           : 'paragraph',
       isBold: currentEditor?.isActive('bold') || false,
       isItalic: currentEditor?.isActive('italic') || false,
+      isUnderline: currentEditor?.isActive('underline') || false,
       isBulletList: currentEditor?.isActive('bulletList') || false,
       isOrderedList: currentEditor?.isActive('orderedList') || false,
       isBlockquote: currentEditor?.isActive('blockquote') || false,
@@ -202,6 +203,13 @@ export function RichTextEditor({ value, onChange }) {
         </ToolbarButton>
         <ToolbarButton label="Cursief" active={editorState.isItalic} onClick={() => commandFromSavedSelection().toggleItalic().run()}>
           <Italic />
+        </ToolbarButton>
+        <ToolbarButton
+          label="Onderlijnen"
+          active={editorState.isUnderline}
+          onClick={() => commandFromSavedSelection().toggleUnderline().run()}
+        >
+          <Underline />
         </ToolbarButton>
         <ToolbarButton label="Opsomming" active={editorState.isBulletList} onClick={() => commandFromSavedSelection().toggleBulletList().run()}>
           <List />

@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify'
 
-const ALLOWED_TAGS = ['p', 'h2', 'h3', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'a', 'br']
+const ALLOWED_TAGS = ['p', 'h2', 'h3', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'blockquote', 'a', 'br']
 const ALLOWED_ATTR = ['href', 'target', 'rel']
 
 function escapeHtml(value) {

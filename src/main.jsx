@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
+  deleteBlogPost,
+  deleteFilterGroup,
+  deleteFilterOption,
   fetchBlogData,
   getSession,
   isConfigured,
@@ -114,9 +117,30 @@ function App() {
     await loadBlogData()
   }
 
+  async function removeBlogPost(postId) {
+    await deleteBlogPost(postId)
+    await loadBlogData()
+  }
+
+  async function removeFilterOption(optionId) {
+    await deleteFilterOption(optionId)
+    await loadBlogData()
+  }
+
+  async function removeFilterGroup(groupId) {
+    await deleteFilterGroup(groupId)
+    await loadBlogData()
+  }
+
   async function saveSiteContent(content) {
     await saveSupabaseSiteContent(content)
     await loadBlogData()
+  }
+
+  function rememberBlogListPath(listPath) {
+    const storedPath = listPath.startsWith('/blog/voor-') ? listPath : '/blog/'
+    setLastBlogListPath(storedPath)
+    window.sessionStorage.setItem(BLOG_LIST_PATH_STORAGE_KEY, storedPath)
   }
 
   React.useEffect(() => {
@@ -161,7 +185,7 @@ function App() {
     <>
       <Header path={path} menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
       <main>
-        {path === '/' && <Home content={siteContent.home} />}
+        {path === '/' && <Home content={siteContent.home} isLoading={dataStatus === 'loading'} />}
         {isBlogListPath(path) && (
           <BlogList
             path={window.location.pathname}
@@ -170,6 +194,7 @@ function App() {
             filters={blogFilters}
             setFilters={setBlogFilters}
             isLoading={dataStatus === 'loading'}
+            onOpenPost={() => rememberBlogListPath(window.location.pathname)}
           />
         )}
         {path === '/beheer' && (
@@ -191,7 +216,10 @@ function App() {
                 setSession(null)
               }}
               onSavePost={savePost}
+              onDeletePost={removeBlogPost}
               onSaveFilterGroups={saveFilterGroups}
+              onDeleteFilterOption={removeFilterOption}
+              onDeleteFilterGroup={removeFilterGroup}
               siteContent={siteContent}
               siteContentTableMissing={siteContentTableMissing}
               audienceLinksTableMissing={audienceLinksTableMissing}
@@ -199,11 +227,11 @@ function App() {
             />
           </React.Suspense>
         )}
-        {path === '/over-jorane' && <About content={siteContent.about} />}
+        {path === '/over-jorane' && <About content={siteContent.about} isLoading={dataStatus === 'loading'} />}
         {path === '/contact' && <Contact onSubmitContact={sendContactEmail} />}
         {path === '/privacy' && <Privacy />}
         {allPosts.some((post) => post.path === path) && <BlogPost post={allPosts.find((post) => post.path === path)} filterGroups={siteFilterGroups} backPath={lastBlogListPath} />}
-        {!isKnownPath(path, allPosts) && <Home content={siteContent.home} />}
+        {!isKnownPath(path, allPosts) && <Home content={siteContent.home} isLoading={dataStatus === 'loading'} />}
       </main>
       <Footer />
     </>

@@ -32,6 +32,7 @@ function toPost(row, audiencesById, audienceLinksByPostId, linksByPostId, option
       slug: audience.slug,
       name: audience.name,
       categoryPath: audience.category_path,
+      imagePath: audience.image_path,
       accentColor: audience.accent_color,
     })),
     audienceNames: postAudiences.map((audience) => audience.name),
@@ -271,6 +272,24 @@ export async function saveBlogPost(article, originalPath, currentPosts, audience
   }
 
   return `/blog/${slug}`
+}
+
+export async function deleteBlogPost(postId) {
+  if (!postId) throw new Error('Dit artikel kon niet gevonden worden.')
+  const { error } = await supabase.from('blog_posts').delete().eq('id', postId)
+  if (error) throw error
+}
+
+export async function deleteFilterOption(optionId) {
+  if (!optionId) throw new Error('Deze filteroptie kon niet gevonden worden.')
+  const { error } = await supabase.from('blog_filter_options').delete().eq('id', optionId)
+  if (error) throw error
+}
+
+export async function deleteFilterGroup(groupId) {
+  if (!groupId) throw new Error('Deze filtercategorie kon niet gevonden worden.')
+  const { error } = await supabase.from('blog_filter_groups').delete().eq('id', groupId)
+  if (error) throw error
 }
 
 export async function saveFilters(groups) {
