@@ -15,9 +15,12 @@ import { defaultFilterGroups, defaultSiteContent, posts } from './data'
 import { Header, Footer } from './components/Layout'
 import { Home, About, Contact, Privacy } from './pages/StaticPages'
 import { BlogList, BlogPost } from './pages/BlogPages'
-import { AdminCMS } from './pages/AdminCMS'
 import { getEmptyFilterState, normalizePath } from './utils'
 import './styles.css'
+
+const AdminCMS = React.lazy(() =>
+  import('./pages/AdminCMS').then((module) => ({ default: module.AdminCMS })),
+)
 
 const BLOG_FILTER_STORAGE_KEY = 'meeinhetverhaal.blogFilters'
 const BLOG_LIST_PATH_STORAGE_KEY = 'meeinhetverhaal.blogListPath'
@@ -168,28 +171,30 @@ function App() {
           />
         )}
         {path === '/beheer' && (
-          <AdminCMS
-            posts={allPosts}
-            filterGroups={siteFilterGroups}
-            audiences={audiences}
-            session={session}
-            dataStatus={dataStatus}
-            dataError={dataError}
-            onLogin={async (email, password) => {
-              const activeSession = await signIn(email, password)
-              setSession(activeSession)
-              await loadBlogData()
-            }}
-            onLogout={async () => {
-              await signOut()
-              setSession(null)
-            }}
-            onSavePost={savePost}
-            onSaveFilterGroups={saveFilterGroups}
-            siteContent={siteContent}
-            siteContentTableMissing={siteContentTableMissing}
-            onSaveSiteContent={saveSiteContent}
-          />
+          <React.Suspense fallback={<AdminLoading />}>
+            <AdminCMS
+              posts={allPosts}
+              filterGroups={siteFilterGroups}
+              audiences={audiences}
+              session={session}
+              dataStatus={dataStatus}
+              dataError={dataError}
+              onLogin={async (email, password) => {
+                const activeSession = await signIn(email, password)
+                setSession(activeSession)
+                await loadBlogData()
+              }}
+              onLogout={async () => {
+                await signOut()
+                setSession(null)
+              }}
+              onSavePost={savePost}
+              onSaveFilterGroups={saveFilterGroups}
+              siteContent={siteContent}
+              siteContentTableMissing={siteContentTableMissing}
+              onSaveSiteContent={saveSiteContent}
+            />
+          </React.Suspense>
         )}
         {path === '/over-jorane' && <About content={siteContent.about} />}
         {path === '/contact' && <Contact onSubmitContact={sendContactEmail} />}
@@ -199,6 +204,20 @@ function App() {
       </main>
       <Footer />
     </>
+  )
+}
+
+function AdminLoading() {
+  return (
+    <section className="admin-section section-bg">
+      <div className="page-width">
+        <div className="admin-heading">
+          <span>Beheer</span>
+          <h1>Editor laden</h1>
+          <p>De teksteditor wordt klaargezet.</p>
+        </div>
+      </div>
+    </section>
   )
 }
 

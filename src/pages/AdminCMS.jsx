@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { categories, defaultArticle } from '../data'
+import { RichTextEditor } from '../components/RichTextEditor'
+import { isRichTextEmpty } from '../richText'
 import { createFilterKey, getCategoryConfig, getEmptyFilterState } from '../utils'
 
 export function articleFromPost(post, filterGroups) {
@@ -56,7 +58,8 @@ export function AdminCMS({
     intro: article.intro || 'Schrijf hier een korte beschrijving die gezinnen, leerkrachten of zorgverleners meteen helpt begrijpen waar dit artikel over gaat.',
   }
   const hasEveryFilterGroup = filterGroups.every((group) => group.options.length === 0 || (article[group.key] || []).length > 0)
-  const canSave = article.title.trim() && article.intro.trim() && (isEditing || article.content.trim()) && hasEveryFilterGroup
+  const hasArticleContent = !isRichTextEmpty(article.content)
+  const canSave = article.title.trim() && article.intro.trim() && hasArticleContent && hasEveryFilterGroup
   const canSaveSiteContent = Object.values(draftSiteContent).every((page) => page.title.trim() && page.body.trim())
   const adminViewTitle = {
     new: 'Nieuwe blog aanmaken',
@@ -473,13 +476,13 @@ export function AdminCMS({
                   <span>{activeAdminView === 'manage' ? '4' : '3'}</span>
                   <div>
                     <h2>Inhoud</h2>
-                    <p>Deze tekst komt op het detail scherm.</p>
+                    <p>Selecteer tekst en kies de gewenste opmaak.</p>
                   </div>
                 </div>
-                <label className="admin-field">
-                  Artikeltekst
-                  <textarea className="article-body-input" value={article.content} onChange={(event) => updateField('content', event.target.value)} rows="8" placeholder="Schrijf je artikeltekst hier..." />
-                </label>
+                <div className="admin-field">
+                  <span>Artikeltekst</span>
+                  <RichTextEditor value={article.content} onChange={(value) => updateField('content', value)} />
+                </div>
               </section>
 
               <div className="admin-actions">
@@ -505,7 +508,7 @@ export function AdminCMS({
                 <div className="preview-checklist">
                   <span className={article.title.trim() ? 'done' : ''}>Titel</span>
                   <span className={article.intro.trim() ? 'done' : ''}>Beschrijving</span>
-                  <span className={isEditing || article.content.trim() ? 'done' : ''}>Tekst</span>
+                  <span className={hasArticleContent ? 'done' : ''}>Tekst</span>
                   <span className={hasEveryFilterGroup ? 'done' : ''}>Filters</span>
                 </div>
                 {activeAdminView === 'manage' && isEditing && <a className="preview-open-link" href={article.path}>Bekijk artikel</a>}

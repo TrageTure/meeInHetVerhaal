@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { categories } from '../data'
+import { isRichTextEmpty, sanitizeRichText } from '../richText'
 import { getEmptyFilterState } from '../utils'
 
 export function BlogList({ path, posts: blogPosts, filterGroups, filters, setFilters, isLoading }) {
@@ -131,10 +132,8 @@ export function FilterControls({ filterGroups, filters, toggleFilter, clearFilte
 
 export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
   const tags = filterGroups.flatMap((group) => post[group.key] || [])
-  const contentParagraphs = (post.content || '')
-    .split(/\n+/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
+  const hasContent = !isRichTextEmpty(post.content)
+  const contentHtml = sanitizeRichText(post.content)
 
   return (
     <section className="post-page">
@@ -159,8 +158,8 @@ export function BlogPost({ post, filterGroups, backPath = '/blog/' }) {
           ))}
         </div>
         <div className="post-content">
-          {contentParagraphs.length > 0 ? (
-            contentParagraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)
+          {hasContent ? (
+            <div className="rich-text-content" dangerouslySetInnerHTML={{ __html: contentHtml }} />
           ) : (
             <>
               <p>
